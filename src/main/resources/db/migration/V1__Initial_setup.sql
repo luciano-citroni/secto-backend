@@ -2,23 +2,35 @@ CREATE SCHEMA IF NOT EXISTS secto;
 
 SET search_path TO secto, public;
 
+-- Tabela de empresas (Company)
+CREATE TABLE company (
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tabela principal de tipos de serviço
 CREATE TABLE service_type (
     id UUID PRIMARY KEY,
+    company_id UUID NOT NULL,
     name TEXT NOT NULL UNIQUE,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 );
 
 -- Tabela de subtipos de serviço
 CREATE TABLE service_sub_type (
     id UUID PRIMARY KEY,
+    company_id UUID NOT NULL,
     service_type_id UUID NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE,
     FOREIGN KEY (service_type_id) REFERENCES service_type(id) ON DELETE CASCADE,
     UNIQUE(service_type_id, name)
 );
@@ -26,11 +38,13 @@ CREATE TABLE service_sub_type (
 -- Tabela de scripts de serviço
 CREATE TABLE script (
     id UUID PRIMARY KEY,
+    company_id UUID NOT NULL,
     service_sub_type_id UUID NOT NULL,
     name TEXT NOT NULL,
     status BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE,
     FOREIGN KEY (service_sub_type_id) REFERENCES service_sub_type(id) ON DELETE CASCADE,
     UNIQUE(service_sub_type_id, name)
 );
@@ -46,7 +60,10 @@ CREATE TABLE script_item (
 );
 
 -- Índices para melhor performance
+CREATE INDEX idx_service_type_company_id ON service_type(company_id);
 CREATE INDEX idx_service_sub_type_service_type_id ON service_sub_type(service_type_id);
+CREATE INDEX idx_service_sub_type_company_id ON service_sub_type(company_id);
 CREATE INDEX idx_script_service_sub_type_id ON script(service_sub_type_id);
+CREATE INDEX idx_script_company_id ON script(company_id);
 CREATE INDEX idx_script_status ON script(status);
 CREATE INDEX idx_script_item_script_id ON script_item(script_id);
