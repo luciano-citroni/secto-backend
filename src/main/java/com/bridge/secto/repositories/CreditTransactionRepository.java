@@ -5,9 +5,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.bridge.secto.entities.ScriptItem;
+import com.bridge.secto.entities.CreditTransaction;
 
 @Repository
-public interface ScriptItemRepository extends JpaRepository<ScriptItem, UUID> {
+public interface CreditTransactionRepository extends JpaRepository<CreditTransaction, UUID> {
     
 }

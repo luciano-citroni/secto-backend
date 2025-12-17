@@ -45,7 +45,7 @@ public class ServiceType extends BaseEntity {
         accessMode = Schema.AccessMode.READ_ONLY
     )
     @OneToMany(mappedBy = "serviceType", cascade=CascadeType.ALL)
-    private List<ServiceSubType> serviceSubType;
+    private List<ServiceSubType> serviceSubTypes;
 
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="company_id", nullable = false)    

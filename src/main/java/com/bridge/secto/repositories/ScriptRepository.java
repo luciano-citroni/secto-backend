@@ -1,6 +1,13 @@
 package com.bridge.secto.repositories;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public abstract class ScriptRepository implements JpaRepository{
+import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.bridge.secto.entities.Script;
+
+@Repository
+public interface ScriptRepository extends JpaRepository<Script, UUID> {
     
 }
