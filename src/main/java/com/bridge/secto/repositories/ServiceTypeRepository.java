@@ -1,6 +1,14 @@
 package com.bridge.secto.repositories;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public abstract class ServiceTypeRepository implements JpaRepository{
-    
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.bridge.secto.entities.ServiceType;
+
+@Repository
+public interface ServiceTypeRepository extends JpaRepository<ServiceType, UUID> {
+    List<ServiceType> findByCompanyId(UUID companyId);
 }

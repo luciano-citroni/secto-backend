@@ -1,11 +1,6 @@
 package com.bridge.secto.controllers;
 
-import java.util.UUID;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.services.ServiceTypeService;
@@ -16,13 +11,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/service-types")
 @Tag(name = "Service Types", description = "Gerenciamento de tipos de serviço para análise de voz")
 public class ServiceTypeController {
+    
     private final ServiceTypeService serviceTypeService;
 
-    @GetMapping("by-company")
-    public ResponseEntity<> getServiceTypesByCompany(@RequestParam UUID companyId) {
-        
-        return ResponseEntity.ok().body(this.serviceTypeService.getServiceTypesByCompany(companyId)).build();
+    public ServiceTypeController(ServiceTypeService serviceTypeService) {
+        this.serviceTypeService = serviceTypeService;
     }
+    // @GetMapping("by-company")
+    // public ResponseEntity<List<ServiceType>> getServiceTypesByCompany(@RequestParam UUID companyId) {
+    //     return ResponseEntity.ok(this.serviceTypeService.getServiceTypesByCompany(companyId));
+    // }
     // @Operation(
     //     summary = "Listar todos os tipos de serviço",
     //     description = "Retorna uma lista com todos os tipos de serviço cadastrados no sistema"
