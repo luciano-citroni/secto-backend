@@ -137,27 +137,6 @@
 				</configuration>
 			</plugin>
 			<plugin>
-				<groupId>com.dkanejs.maven.plugins</groupId>
-				<artifactId>docker-compose-maven-plugin</artifactId>
-				<version>4.0.0</version>
-				<configuration>
-					<composeFile>docker-compose.yml</composeFile>
-					<detachedMode>true</detachedMode>
-					<services>
-						<service>postgres</service>
-					</services>
-				</configuration>
-				<executions>
-					<execution>
-						<id>up</id>
-						<phase>process-test-classes</phase>
-						<goals>
-							<goal>up</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
@@ -171,5 +150,36 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>dev</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>com.dkanejs.maven.plugins</groupId>
+						<artifactId>docker-compose-maven-plugin</artifactId>
+						<version>4.0.0</version>
+						<configuration>
+							<composeFile>docker-compose.yml</composeFile>
+							<detachedMode>true</detachedMode>
+							<services>
+								<service>postgres</service>
+							</services>
+						</configuration>
+						<executions>
+							<execution>
+								<id>up</id>
+								<phase>process-test-classes</phase>
+								<goals>
+									<goal>up</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>
