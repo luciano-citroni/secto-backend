@@ -1,9 +1,10 @@
 package com.bridge.secto.config;
 
-import io.github.cdimascio.dotenv.Dotenv;
-import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+
+import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.annotation.PostConstruct;
 
 @Configuration
 @Profile("!docker") // Não executa no profile docker (container usa variáveis de ambiente)

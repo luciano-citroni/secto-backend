@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.bridge</groupId>
 	<artifactId>secto</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2</version>
 	<name>Spring API made for sectotech voice analysis system</name>
 	<description>Sectotech voice analysis system spring backend made by Javier</description>
 	<url/>
@@ -74,6 +74,13 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>2.7.0</version>
+		</dependency>
+		
+		<!-- Dotenv Java for loading .env files -->
+		<dependency>
+			<groupId>io.github.cdimascio</groupId>
+			<artifactId>dotenv-java</artifactId>
+			<version>3.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
