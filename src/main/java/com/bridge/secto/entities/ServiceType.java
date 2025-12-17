@@ -6,6 +6,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -43,5 +46,8 @@ public class ServiceType extends BaseEntity {
     )
     @OneToMany(mappedBy = "serviceType", cascade=CascadeType.ALL)
     private List<ServiceSubType> serviceSubType;
-    
+
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name="company_id", nullable = false)    
+    private Company company;
 }

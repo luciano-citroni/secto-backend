@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -30,4 +31,8 @@ public class Script extends BaseEntity{
     @ManyToOne
     @JoinColumn(name = "service_sub_type_id", nullable = false)
     private ServiceSubType serviceSubType;
+
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name="company_id", nullable = false)    
+    private Company company;
 }
