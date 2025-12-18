@@ -18,6 +18,8 @@ import com.bridge.secto.entities.ServiceType;
 import com.bridge.secto.repositories.ServiceSubTypeRepository;
 import com.bridge.secto.repositories.ServiceTypeRepository;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -28,6 +30,8 @@ public class ServiceSubTypeController {
     private final ServiceSubTypeRepository serviceSubTypeRepository;
     private final ServiceTypeRepository serviceTypeRepository;
 
+    @Operation(summary = "Get Service Sub Types by Service Type")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
     @GetMapping("/byServiceType/{serviceTypeId}")
     public ResponseEntity<List<ServiceSubTypeResponseDto>> getServiceSubTypesByServiceType(@PathVariable UUID serviceTypeId) {
         List<ServiceSubTypeResponseDto> dtos = serviceSubTypeRepository.findByServiceTypeId(serviceTypeId).stream()
@@ -42,6 +46,8 @@ public class ServiceSubTypeController {
         return ResponseEntity.ok(dtos);
     }
 
+    @Operation(summary = "Create Service Sub Type")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
     @PostMapping("/byServiceType/{serviceTypeId}")
     public ResponseEntity<ServiceSubTypeResponseDto> createServiceSubType(@PathVariable UUID serviceTypeId, @RequestBody ServiceSubType request) {
         ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)

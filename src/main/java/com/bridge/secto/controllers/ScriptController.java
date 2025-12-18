@@ -18,6 +18,8 @@ import com.bridge.secto.entities.ServiceSubType;
 import com.bridge.secto.repositories.ScriptRepository;
 import com.bridge.secto.repositories.ServiceSubTypeRepository;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -28,6 +30,8 @@ public class ScriptController {
     private final ScriptRepository scriptRepository;
     private final ServiceSubTypeRepository serviceSubTypeRepository;
 
+    @Operation(summary = "Get Scripts by Service Sub Type")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
     @GetMapping("/byServiceSubType/{serviceSubTypeId}")
     public ResponseEntity<List<ScriptResponseDto>> getScriptsByServiceSubType(@PathVariable UUID serviceSubTypeId) {
         List<ScriptResponseDto> dtos = scriptRepository.findByServiceSubTypeId(serviceSubTypeId).stream()
@@ -42,6 +46,8 @@ public class ScriptController {
         return ResponseEntity.ok(dtos);
     }
 
+    @Operation(summary = "Create Script")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
     @PostMapping("/byServiceSubType/{serviceSubTypeId}")
     public ResponseEntity<ScriptResponseDto> createScript(@PathVariable UUID serviceSubTypeId, @RequestBody Script request) {
         ServiceSubType serviceSubType = serviceSubTypeRepository.findById(serviceSubTypeId)
