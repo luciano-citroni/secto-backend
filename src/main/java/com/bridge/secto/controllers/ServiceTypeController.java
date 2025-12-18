@@ -1,139 +1,64 @@
 package com.bridge.secto.controllers;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bridge.secto.services.ServiceTypeService;
+import com.bridge.secto.dtos.ServiceTypeResponseDto;
+import com.bridge.secto.entities.Company;
+import com.bridge.secto.entities.ServiceType;
+import com.bridge.secto.repositories.CompanyRepository;
+import com.bridge.secto.repositories.ServiceTypeRepository;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/service-types")
-@Tag(name = "Service Types", description = "Gerenciamento de tipos de serviço para análise de voz")
+@RequiredArgsConstructor
 public class ServiceTypeController {
-    
-    private final ServiceTypeService serviceTypeService;
 
-    public ServiceTypeController(ServiceTypeService serviceTypeService) {
-        this.serviceTypeService = serviceTypeService;
+    private final ServiceTypeRepository serviceTypeRepository;
+    private final CompanyRepository companyRepository;
+
+    @GetMapping("/byCompany/{companyId}")
+    public ResponseEntity<List<ServiceTypeResponseDto>> getServiceTypesByCompany(@PathVariable UUID companyId) {
+        List<ServiceTypeResponseDto> dtos = serviceTypeRepository.findByCompanyId(companyId).stream()
+            .map(serviceType -> {
+                ServiceTypeResponseDto dto = new ServiceTypeResponseDto();
+                dto.setId(serviceType.getId());
+                dto.setName(serviceType.getName());
+                dto.setDescription(serviceType.getDescription());
+                return dto;
+            })
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
-    // @GetMapping("by-company")
-    // public ResponseEntity<List<ServiceType>> getServiceTypesByCompany(@RequestParam UUID companyId) {
-    //     return ResponseEntity.ok(this.serviceTypeService.getServiceTypesByCompany(companyId));
-    // }
-    // @Operation(
-    //     summary = "Listar todos os tipos de serviço",
-    //     description = "Retorna uma lista com todos os tipos de serviço cadastrados no sistema"
-    // )
-    // @ApiResponses(value = {
-    //     @ApiResponse(
-    //         responseCode = "200", 
-    //         description = "Lista retornada com sucesso",
-    //         content = @Content(
-    //             mediaType = "application/json",
-    //             schema = @Schema(implementation = ServiceType.class)
-    //         )
-    //     ),
-    //     @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
-    // })
-    // @GetMapping
-    // public ResponseEntity<List<ServiceType>> getAllServiceTypes() {
-    //     // TODO: Implementar lógica de busca
-    //     return ResponseEntity.ok().build();
-    // }
 
-    // @Operation(
-    //     summary = "Buscar tipo de serviço por ID",
-    //     description = "Retorna um tipo de serviço específico baseado no ID fornecido"
-    // )
-    // @ApiResponses(value = {
-    //     @ApiResponse(
-    //         responseCode = "200", 
-    //         description = "Tipo de serviço encontrado",
-    //         content = @Content(
-    //             mediaType = "application/json",
-    //             schema = @Schema(implementation = ServiceType.class)
-    //         )
-    //     ),
-    //     @ApiResponse(responseCode = "404", description = "Tipo de serviço não encontrado"),
-    //     @ApiResponse(responseCode = "400", description = "ID inválido fornecido")
-    // })
-    // @GetMapping("/{id}")
-    // public ResponseEntity<ServiceType> getServiceTypeById(
-    //     @Parameter(description = "ID único do tipo de serviço", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
-    //     @PathVariable UUID id
-    // ) {
-    //     // TODO: Implementar lógica de busca por ID
-    //     return ResponseEntity.ok().build();
-    // }
-
-    // @Operation(
-    //     summary = "Criar novo tipo de serviço",
-    //     description = "Cria um novo tipo de serviço no sistema"
-    // )
-    // @ApiResponses(value = {
-    //     @ApiResponse(
-    //         responseCode = "201", 
-    //         description = "Tipo de serviço criado com sucesso",
-    //         content = @Content(
-    //             mediaType = "application/json",
-    //             schema = @Schema(implementation = ServiceType.class)
-    //         )
-    //     ),
-    //     @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
-    //     @ApiResponse(responseCode = "409", description = "Tipo de serviço já existe")
-    // })
-    // @PostMapping
-    // public ResponseEntity<ServiceType> createServiceType(
-    //     @Parameter(description = "Dados do tipo de serviço a ser criado", required = true)
-    //     @RequestBody ServiceType serviceType
-    // ) {
-    //     // TODO: Implementar lógica de criação
-    //     return ResponseEntity.status(HttpStatus.CREATED).build();
-    // }
-
-    // @Operation(
-    //     summary = "Atualizar tipo de serviço",
-    //     description = "Atualiza os dados de um tipo de serviço existente"
-    // )
-    // @ApiResponses(value = {
-    //     @ApiResponse(
-    //         responseCode = "200", 
-    //         description = "Tipo de serviço atualizado com sucesso",
-    //         content = @Content(
-    //             mediaType = "application/json",
-    //             schema = @Schema(implementation = ServiceType.class)
-    //         )
-    //     ),
-    //     @ApiResponse(responseCode = "404", description = "Tipo de serviço não encontrado"),
-    //     @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos")
-    // })
-    // @PutMapping("/{id}")
-    // public ResponseEntity<ServiceType> updateServiceType(
-    //     @Parameter(description = "ID único do tipo de serviço", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
-    //     @PathVariable UUID id, 
-    //     @Parameter(description = "Dados atualizados do tipo de serviço", required = true)
-    //     @RequestBody ServiceType serviceTypeDetails
-    // ) {
-    //     // TODO: Implementar lógica de atualização
-    //     return ResponseEntity.ok().build();
-    // }
-
-    // @Operation(
-    //     summary = "Deletar tipo de serviço",
-    //     description = "Remove um tipo de serviço do sistema"
-    // )
-    // @ApiResponses(value = {
-    //     @ApiResponse(responseCode = "204", description = "Tipo de serviço deletado com sucesso"),
-    //     @ApiResponse(responseCode = "404", description = "Tipo de serviço não encontrado"),
-    //     @ApiResponse(responseCode = "409", description = "Não é possível deletar - tipo de serviço possui dependências")
-    // })
-    // @DeleteMapping("/{id}")
-    // public ResponseEntity<Void> deleteServiceType(
-    //     @Parameter(description = "ID único do tipo de serviço", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
-    //     @PathVariable UUID id
-    // ) {
-    //     // TODO: Implementar lógica de remoção
-    //     return ResponseEntity.noContent().build();
-    // }
+    @PostMapping("/byCompany/{companyId}")
+    public ResponseEntity<ServiceTypeResponseDto> createServiceType(@PathVariable UUID companyId, @RequestBody ServiceType request) {
+        Company company = companyRepository.findById(companyId)
+            .orElseThrow(() -> new RuntimeException("Company not found with id: " + companyId));
+        
+        ServiceType serviceType = new ServiceType();
+        serviceType.setName(request.getName());
+        serviceType.setDescription(request.getDescription());
+        serviceType.setCompany(company);
+        
+        serviceTypeRepository.save(serviceType);
+        
+        ServiceTypeResponseDto dto = new ServiceTypeResponseDto();
+        dto.setId(serviceType.getId());
+        dto.setName(serviceType.getName());
+        dto.setDescription(serviceType.getDescription());
+        
+        return ResponseEntity.ok(dto);
+    }
 }

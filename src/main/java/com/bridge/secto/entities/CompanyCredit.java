@@ -22,7 +22,7 @@ public class CompanyCredit extends BaseEntity{
     @OneToOne(mappedBy="companyCredit")
     private Company company;
     
-    @OneToMany(mappedBy = "companyCredit")
+    @OneToMany(mappedBy = "companyCredit", cascade = jakarta.persistence.CascadeType.ALL)
     private List<CreditTransaction> creditTransactions;
 
     @Column(precision=19, scale=2, nullable = false)

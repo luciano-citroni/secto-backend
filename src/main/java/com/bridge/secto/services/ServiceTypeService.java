@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.bridge.secto.dtos.ServiceTypeResponseDto;
 import com.bridge.secto.repositories.ServiceTypeRepository;
 
 @Service

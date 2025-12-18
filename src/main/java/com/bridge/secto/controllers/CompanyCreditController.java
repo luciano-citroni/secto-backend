@@ -40,12 +40,10 @@ public class CompanyCreditController {
 
         CompanyCredit credit = new CompanyCredit();
         credit.setCreditAmount(request.getCreditAmount());
-        credit.setCompany(company); // Set inverse side for consistency
+        credit.setCompany(company);
 
-        // Set the owning side
         company.setCompanyCredit(credit);
         
-        // Save the owning side (Company), which cascades to CompanyCredit
         companyRepository.save(company);
         
         return ResponseEntity.ok(company.getCompanyCredit());

@@ -1,4 +1,4 @@
-package com.bridge.secto.services;
+package com.bridge.secto.dtos;
 
 import java.util.UUID;
 
