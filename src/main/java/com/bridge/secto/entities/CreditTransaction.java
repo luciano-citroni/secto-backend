@@ -2,6 +2,8 @@ package com.bridge.secto.entities;
 
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
@@ -14,6 +16,7 @@ import lombok.Data;
 @Table(name = "credit_transaction", schema = "secto")
 public class CreditTransaction extends BaseEntity {
 
+    @JsonIgnore
     @ManyToOne()
     @JoinColumn(name = "company_credit_id", nullable = false)
     private CompanyCredit companyCredit;
