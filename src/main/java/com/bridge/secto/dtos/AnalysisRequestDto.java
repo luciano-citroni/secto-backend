@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class AnalysisRequestDto {
+    private String clientName;
     private String transcription;
     private List<ScriptItemInputDto> scriptItems;
 }

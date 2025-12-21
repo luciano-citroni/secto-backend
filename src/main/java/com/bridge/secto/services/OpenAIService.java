@@ -12,6 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.bridge.secto.dtos.OpenAiAnalysisResponseDTO;
 import com.bridge.secto.dtos.ScriptItemInputDto;
+import com.bridge.secto.entities.AnalysisResult;
+import com.bridge.secto.repositories.AnalysisResultRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
 import com.openai.models.ChatModel;
 import com.openai.models.audio.AudioModel;
@@ -27,8 +30,10 @@ import lombok.RequiredArgsConstructor;
 public class OpenAIService {
 
     private final OpenAIClient openAIClient;
+    private final AnalysisResultRepository analysisResultRepository;
+    private final ObjectMapper objectMapper;
 
-    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems) {
+    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, String clientName, String audioFilename) {
 
         String scriptText = scriptItems.stream()
                 .map(item -> String.format("Question: %s\nAnswer: %s", item.getQuestion(), item.getAnswer()))
@@ -58,6 +63,24 @@ public class OpenAIService {
                     .allMatch(OpenAiAnalysisResponseDTO.OutputItem::isCorrect);
             
             response.setApproved(approved);
+
+            // Save result
+            try {
+                AnalysisResult result = new AnalysisResult();
+                result.setClientName(clientName);
+                result.setAudioFilename(audioFilename);
+                result.setTranscription(transcription);
+                result.setScriptJson(objectMapper.writeValueAsString(scriptItems));
+                result.setAiOutputJson(objectMapper.writeValueAsString(response));
+                result.setApproved(approved);
+                
+                analysisResultRepository.save(result);
+            } catch (Exception e) {
+                // Log error but don't fail the request? Or fail?
+                // For now, just print stack trace or let it bubble if critical.
+                // Better to log and continue or throw.
+                e.printStackTrace(); 
+            }
         }
 
         return response;

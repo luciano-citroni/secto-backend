@@ -39,7 +39,15 @@ public class OpenAIController {
         if (transcription == null || transcription.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        OpenAiAnalysisResponseDTO response = openAIService.compareTranscribedTextAndScript(transcription, request.getScriptItems());
+        
+        String audioFilename = (file != null) ? file.getOriginalFilename() : null;
+        
+        OpenAiAnalysisResponseDTO response = openAIService.compareTranscribedTextAndScript(
+            transcription, 
+            request.getScriptItems(), 
+            request.getClientName(), 
+            audioFilename
+        );
         return ResponseEntity.ok(response);
     }
 
