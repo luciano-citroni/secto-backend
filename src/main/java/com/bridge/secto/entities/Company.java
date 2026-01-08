@@ -21,7 +21,7 @@ public class Company extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "owner_id")
     private UUID ownerId;
 
     @OneToOne(cascade = CascadeType.ALL, fetch=FetchType.LAZY)

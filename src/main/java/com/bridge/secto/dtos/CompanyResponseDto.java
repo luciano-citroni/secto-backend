@@ -7,6 +7,6 @@ import lombok.Data;
 @Data
 public class CompanyResponseDto {
     private UUID id;
-    private String name;
     private UUID ownerId;
+    private String name;
 }

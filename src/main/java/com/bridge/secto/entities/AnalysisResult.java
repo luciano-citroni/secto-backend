@@ -22,6 +22,9 @@ public class AnalysisResult extends BaseEntity {
     @Column(name = "audio_filename")
     private String audioFilename;
 
+    @Column(name = "audio_url")
+    private String audioUrl;
+
     @Column(columnDefinition = "TEXT")
     private String transcription;
 
