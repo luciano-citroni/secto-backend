@@ -25,7 +25,7 @@ public class Script extends BaseEntity{
     @Column()
     private Boolean status;
     
-    @OneToMany(mappedBy = "script", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "script", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ScriptItem> scriptItems;
     
     @ManyToOne

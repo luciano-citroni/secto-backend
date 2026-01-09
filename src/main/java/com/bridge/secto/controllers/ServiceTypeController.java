@@ -6,7 +6,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +16,7 @@ import com.bridge.secto.entities.Company;
 import com.bridge.secto.entities.ServiceType;
 import com.bridge.secto.repositories.CompanyRepository;
 import com.bridge.secto.repositories.ServiceTypeRepository;
+import com.bridge.secto.services.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,11 +29,16 @@ public class ServiceTypeController {
 
     private final ServiceTypeRepository serviceTypeRepository;
     private final CompanyRepository companyRepository;
+    private final AuthService authService;
 
     @Operation(summary = "Get Service Types by Company")
     @ApiResponse(responseCode = "200", description = "Successful operation")
-    @GetMapping("/byCompany/{companyId}")
-    public ResponseEntity<List<ServiceTypeResponseDto>> getServiceTypesByCompany(@PathVariable UUID companyId) {
+    @GetMapping
+    public ResponseEntity<List<ServiceTypeResponseDto>> getServiceTypesByCompany() {
+        UUID companyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
         List<ServiceTypeResponseDto> dtos = serviceTypeRepository.findByCompanyId(companyId).stream()
             .map(serviceType -> {
                 ServiceTypeResponseDto dto = new ServiceTypeResponseDto();
@@ -48,8 +53,12 @@ public class ServiceTypeController {
 
     @Operation(summary = "Create Service Type")
     @ApiResponse(responseCode = "200", description = "Successful operation")
-    @PostMapping("/byCompany/{companyId}")
-    public ResponseEntity<ServiceTypeResponseDto> createServiceType(@PathVariable UUID companyId, @RequestBody ServiceType request) {
+    @PostMapping
+    public ResponseEntity<ServiceTypeResponseDto> createServiceType(@RequestBody ServiceType request) {
+        UUID companyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
         Company company = companyRepository.findById(companyId)
             .orElseThrow(() -> new RuntimeException("Company not found with id: " + companyId));
         

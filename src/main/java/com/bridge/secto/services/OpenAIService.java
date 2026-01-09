@@ -33,7 +33,7 @@ public class OpenAIService {
     private final AnalysisResultRepository analysisResultRepository;
     private final ObjectMapper objectMapper;
 
-    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, String clientName, String audioFilename) {
+    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, String clientName, String audioFilename, String audioUrl) {
 
         String scriptText = scriptItems.stream()
                 .map(item -> String.format("Question: %s\nAnswer: %s", item.getQuestion(), item.getAnswer()))
@@ -69,6 +69,7 @@ public class OpenAIService {
                 AnalysisResult result = new AnalysisResult();
                 result.setClientName(clientName);
                 result.setAudioFilename(audioFilename);
+                result.setAudioUrl(audioUrl);
                 result.setTranscription(transcription);
                 result.setScriptJson(objectMapper.writeValueAsString(scriptItems));
                 result.setAiOutputJson(objectMapper.writeValueAsString(response));

@@ -17,6 +17,7 @@ import com.bridge.secto.entities.ServiceSubType;
 import com.bridge.secto.entities.ServiceType;
 import com.bridge.secto.repositories.ServiceSubTypeRepository;
 import com.bridge.secto.repositories.ServiceTypeRepository;
+import com.bridge.secto.services.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,11 +30,23 @@ public class ServiceSubTypeController {
 
     private final ServiceSubTypeRepository serviceSubTypeRepository;
     private final ServiceTypeRepository serviceTypeRepository;
+    private final AuthService authService;
 
     @Operation(summary = "Get Service Sub Types by Service Type")
     @ApiResponse(responseCode = "200", description = "Successful operation")
     @GetMapping("/byServiceType/{serviceTypeId}")
     public ResponseEntity<List<ServiceSubTypeResponseDto>> getServiceSubTypesByServiceType(@PathVariable UUID serviceTypeId) {
+        UUID userCompanyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
+        ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
+            .orElseThrow(() -> new RuntimeException("ServiceType not found"));
+
+        if (!serviceType.getCompany().getId().equals(userCompanyId)) {
+            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
+        }
+
         List<ServiceSubTypeResponseDto> dtos = serviceSubTypeRepository.findByServiceTypeId(serviceTypeId).stream()
             .map(subType -> {
                 ServiceSubTypeResponseDto dto = new ServiceSubTypeResponseDto();
@@ -50,9 +63,17 @@ public class ServiceSubTypeController {
     @ApiResponse(responseCode = "200", description = "Successful operation")
     @PostMapping("/byServiceType/{serviceTypeId}")
     public ResponseEntity<ServiceSubTypeResponseDto> createServiceSubType(@PathVariable UUID serviceTypeId, @RequestBody ServiceSubType request) {
+        UUID userCompanyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
         ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
             .orElseThrow(() -> new RuntimeException("ServiceType not found with id: " + serviceTypeId));
         
+        if (!serviceType.getCompany().getId().equals(userCompanyId)) {
+            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
+        }
+
         ServiceSubType serviceSubType = new ServiceSubType();
         serviceSubType.setName(request.getName());
         serviceSubType.setDescription(request.getDescription());

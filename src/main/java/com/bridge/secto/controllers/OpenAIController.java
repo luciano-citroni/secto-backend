@@ -11,12 +11,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.bridge.secto.dtos.AnalysisRequestDto;
 import com.bridge.secto.dtos.OpenAiAnalysisResponseDTO;
 import com.bridge.secto.services.OpenAIService;
+import com.bridge.secto.services.S3StorageService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class OpenAIController {
 
     private final OpenAIService openAIService;
+    private final S3StorageService s3StorageService;
 
     @PostMapping(value = "/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
@@ -46,22 +48,26 @@ public class OpenAIController {
             @RequestPart(value = "file", required = false) MultipartFile file) {
         
         String transcription = request.getTranscription();
+        String audioFilename = null;
+        String audioUrl = null;
 
         if (file != null && !file.isEmpty()) {
             transcription = openAIService.transcribeAudio(file);
+            var uploadResponse = s3StorageService.uploadFile(file);
+            audioFilename = uploadResponse.fileName();
+            audioUrl = uploadResponse.fileUrl();
         }
 
         if (transcription == null || transcription.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
         
-        String audioFilename = (file != null) ? file.getOriginalFilename() : null;
-        
         OpenAiAnalysisResponseDTO response = openAIService.compareTranscribedTextAndScript(
             transcription, 
             request.getScriptItems(), 
             request.getClientName(), 
-            audioFilename
+            audioFilename,
+            audioUrl
         );
         return ResponseEntity.ok(response);
     }
