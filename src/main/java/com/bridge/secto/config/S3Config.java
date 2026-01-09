@@ -15,16 +15,16 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 @Configuration
 public class S3Config {
 
-    @Value("${aws.s3.endpoint}")
+    @Value("${AWS_S3_ENDPOINT}")
     private String url;
 
-    @Value("${aws.s3.region}")
+    @Value("${AWS_REGION}")
     private String region;
 
-    @Value("${aws.access-key}")
+    @Value("${AWS_ACCESS_KEY}")
     private String accessKey;
 
-    @Value("${aws.secret-key}")
+    @Value("${AWS_SECRET_KEY}")
     private String secretKey;
 
     @Bean
