@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.bridge.secto.dtos.AnalysisResultResponseDto;
 import com.bridge.secto.entities.AnalysisResult;
 import com.bridge.secto.repositories.AnalysisResultRepository;
+import com.bridge.secto.services.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,12 +27,17 @@ import lombok.RequiredArgsConstructor;
 public class AnalysisResultController {
 
     private final AnalysisResultRepository repository;
+    private final AuthService authService;
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    @Operation(summary = "List all analysis results")
+    @Operation(summary = "List analysis results by company")
     public ResponseEntity<List<AnalysisResultResponseDto>> getAll() {
-        List<AnalysisResultResponseDto> list = repository.findAll().stream()
+        UUID companyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
+        List<AnalysisResultResponseDto> list = repository.findByCompanyId(companyId).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(list);
@@ -40,7 +46,12 @@ public class AnalysisResultController {
     @GetMapping("/{id}")
     @Operation(summary = "Get analysis result by ID")
     public ResponseEntity<AnalysisResultResponseDto> getById(@PathVariable UUID id) {
+        UUID companyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
         return repository.findById(id)
+                .filter(result -> result.getCompany().getId().equals(companyId))
                 .map(this::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

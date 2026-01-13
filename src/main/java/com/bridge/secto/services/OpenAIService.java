@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -13,7 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.bridge.secto.dtos.OpenAiAnalysisResponseDTO;
 import com.bridge.secto.dtos.ScriptItemInputDto;
 import com.bridge.secto.entities.AnalysisResult;
+import com.bridge.secto.entities.Company;
 import com.bridge.secto.repositories.AnalysisResultRepository;
+import com.bridge.secto.repositories.CompanyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
 import com.openai.models.ChatModel;
@@ -31,6 +34,8 @@ public class OpenAIService {
 
     private final OpenAIClient openAIClient;
     private final AnalysisResultRepository analysisResultRepository;
+    private final CompanyRepository companyRepository;
+    private final AuthService authService;
     private final ObjectMapper objectMapper;
 
     public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, String clientName, String audioFilename, String audioUrl) {
@@ -64,8 +69,14 @@ public class OpenAIService {
             
             response.setApproved(approved);
 
-            // Save result
             try {
+                UUID companyId = authService.getCurrentUser()
+                    .map(AuthService.UserInfo::getCompanyId)
+                    .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
+                Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new RuntimeException("Company not found with id: " + companyId));
+
                 AnalysisResult result = new AnalysisResult();
                 result.setClientName(clientName);
                 result.setAudioFilename(audioFilename);
@@ -74,6 +85,7 @@ public class OpenAIService {
                 result.setScriptJson(objectMapper.writeValueAsString(scriptItems));
                 result.setAiOutputJson(objectMapper.writeValueAsString(response));
                 result.setApproved(approved);
+                result.setCompany(company);
                 
                 analysisResultRepository.save(result);
             } catch (Exception e) {
