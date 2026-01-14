@@ -22,6 +22,58 @@ public class AuthService {
 
     private final CompanyRepository companyRepository;
 
+    /**
+     * Obtém a company atual baseada no contexto de autenticação
+     * Funciona tanto para usuários logados quanto para client credentials
+     */
+    public Optional<Company> getCurrentCompany() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            // Verificar se é client credentials (service account)
+            if (isServiceAccount(jwt)) {
+                String clientId = jwt.getClaimAsString("client_id");
+                if (clientId == null) {
+                    // Fallback: tentar extrair do azp (authorized party)
+                    clientId = jwt.getClaimAsString("azp");
+                }
+                
+                if (clientId != null) {
+                    log.debug("Buscando company pelo client_id: {}", clientId);
+                    return companyRepository.findByClientId(clientId);
+                }
+            } else {
+                // É um usuário normal, usar company_id do token
+                String companyIdString = jwt.getClaimAsString("company_id");
+                if (companyIdString != null) {
+                    try {
+                        UUID companyId = UUID.fromString(companyIdString);
+                        return companyRepository.findById(companyId);
+                    } catch (Exception e) {
+                        log.error("Erro ao converter company_id: {}", companyIdString, e);
+                    }
+                }
+            }
+        }
+        
+        return Optional.empty();
+    }
+    
+    /**
+     * Verifica se o JWT é de um service account (client credentials)
+     */
+    private boolean isServiceAccount(Jwt jwt) {
+        // Service accounts no Keycloak têm:
+        // 1. preferred_username que começa com "service-account-"
+        // 2. não têm email
+        String preferredUsername = jwt.getClaimAsString("preferred_username");
+        String email = jwt.getClaimAsString("email");
+        
+        return preferredUsername != null && 
+               preferredUsername.startsWith("service-account-") && 
+               email == null;
+    }
+
     public Optional<UserInfo> getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
@@ -54,11 +106,20 @@ public class AuthService {
 
     /**
      * Obtém a empresa atual do usuário logado
+     * @deprecated Use getCurrentCompany() que suporta tanto usuários quanto client credentials
      */
+    @Deprecated
     public Optional<Company> getCurrentUserCompany() {
-        return getCurrentUser()
-            .filter(user -> user.getCompanyId() != null)
-            .flatMap(user -> companyRepository.findById(user.getCompanyId()));
+        return getCurrentCompany();
+    }
+
+    /**
+     * Obtém o ID da company atual (usuário ou client credentials)
+     */
+    public UUID getCurrentCompanyId() {
+        return getCurrentCompany()
+            .map(Company::getId)
+            .orElseThrow(() -> new RuntimeException("Nenhuma empresa associada ao contexto atual"));
     }
 
 

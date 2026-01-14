@@ -351,4 +351,47 @@ public class KeycloakAdminService {
             throw new RuntimeException("Erro ao buscar usuários da empresa: " + e.getMessage());
         }
     }
+
+    /**
+     * Configurar protocol mappers para incluir clientId no token
+     */
+    private void configureClientProtocolMappers(String internalClientId, String clientId, String adminToken) {
+        try {
+            // Protocol mapper para incluir o clientId no token
+            Map<String, Object> protocolMapper = new HashMap<>();
+            protocolMapper.put("name", "client-id-mapper");
+            protocolMapper.put("protocol", "openid-connect");
+            protocolMapper.put("protocolMapper", "oidc-hardcoded-claim-mapper");
+            
+            Map<String, Object> config = new HashMap<>();
+            config.put("claim.name", "clientId");
+            config.put("claim.value", clientId);
+            config.put("jsonType.label", "String");
+            config.put("id.token.claim", "true");
+            config.put("access.token.claim", "true");
+            
+            protocolMapper.put("config", config);
+            
+            String protocolMapperUrl = String.format("%s/admin/realms/%s/clients/%s/protocol-mappers/models", 
+                getNormalizedBaseUrl(), realm, internalClientId);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+            
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(protocolMapper, headers);
+            
+            ResponseEntity<String> response = restTemplate.postForEntity(protocolMapperUrl, request, String.class);
+            
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("Protocol mapper configurado com sucesso para client: {}", clientId);
+            } else {
+                log.warn("Falha ao configurar protocol mapper para client: {} - Status: {}", clientId, response.getStatusCode());
+            }
+            
+        } catch (Exception e) {
+            log.error("Erro ao configurar protocol mapper para client {}: {}", clientId, e.getMessage(), e);
+            // Não falhar a criação do client por causa do protocol mapper
+        }
+    }
 }

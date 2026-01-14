@@ -35,9 +35,7 @@ public class ServiceTypeController {
     @ApiResponse(responseCode = "200", description = "Successful operation")
     @GetMapping
     public ResponseEntity<List<ServiceTypeResponseDto>> getServiceTypesByCompany() {
-        UUID companyId = authService.getCurrentUser()
-            .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+        UUID companyId = authService.getCurrentCompanyId();
 
         List<ServiceTypeResponseDto> dtos = serviceTypeRepository.findByCompanyId(companyId).stream()
             .map(serviceType -> {
@@ -55,12 +53,8 @@ public class ServiceTypeController {
     @ApiResponse(responseCode = "200", description = "Successful operation")
     @PostMapping
     public ResponseEntity<ServiceTypeResponseDto> createServiceType(@RequestBody ServiceType request) {
-        UUID companyId = authService.getCurrentUser()
-            .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
-
-        Company company = companyRepository.findById(companyId)
-            .orElseThrow(() -> new RuntimeException("Company not found with id: " + companyId));
+        Company company = authService.getCurrentCompany()
+            .orElseThrow(() -> new RuntimeException("Nenhuma empresa associada ao contexto atual"));
         
         ServiceType serviceType = new ServiceType();
         serviceType.setName(request.getName());

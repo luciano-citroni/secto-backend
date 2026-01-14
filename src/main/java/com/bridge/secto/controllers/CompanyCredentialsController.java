@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.entities.Company;
+import com.bridge.secto.repositories.CompanyRepository;
 import com.bridge.secto.services.AuthService;
 import com.bridge.secto.services.KeycloakAdminService;
-import com.bridge.secto.repositories.CompanyRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,17 +34,13 @@ public class CompanyCredentialsController {
     private final KeycloakAdminService keycloakAdminService;
 
     @GetMapping("/credentials")
-    @PreAuthorize("@authService.isCompanyAdmin() or @authService.isUserInCompany(@authService.getCurrentUser().orElseThrow().getCompanyId())")
+    @PreAuthorize("@authService.isCompanyAdmin()")
     @SecurityRequirement(name = "keycloak")
     @Operation(summary = "Obter credenciais da empresa atual", 
                description = "Retorna client_id e client_secret da empresa do usuário logado")
     public ResponseEntity<Map<String, String>> getCompanyCredentials() {
         
-        UUID companyId = authService.getCurrentUser()
-            .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("Company ID não encontrado"));
-
-        Company company = companyRepository.findById(companyId)
+        Company company = authService.getCurrentCompany()
             .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
 
         if (company.getClientId() == null) {
@@ -66,11 +62,7 @@ public class CompanyCredentialsController {
                description = "Regenera o client_secret da empresa atual. Apenas admins podem fazer isso.")
     public ResponseEntity<Map<String, String>> regenerateClientSecret() {
         
-        UUID companyId = authService.getCurrentUser()
-            .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("Company ID não encontrado"));
-
-        Company company = companyRepository.findById(companyId)
+        Company company = authService.getCurrentCompany()
             .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
 
         if (company.getClientId() == null) {
@@ -100,15 +92,13 @@ public class CompanyCredentialsController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("@authService.isCompanyAdmin() or @authService.isUserInCompany(@authService.getCurrentUser().orElseThrow().getCompanyId())")
+    @PreAuthorize("@authService.isCompanyAdmin()")
     @SecurityRequirement(name = "keycloak")
     @Operation(summary = "Listar usuários da empresa atual", 
                description = "Retorna todos os usuários da empresa do usuário logado")
     public ResponseEntity<List<Map<String, Object>>> getCompanyUsers() {
         
-        UUID companyId = authService.getCurrentUser()
-            .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("Company ID não encontrado"));
+        UUID companyId = authService.getCurrentCompanyId();
 
         try {
             List<Map<String, Object>> users = keycloakAdminService.getCompanyUsers(companyId);
