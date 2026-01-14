@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +33,6 @@ public class CompanyCredentialsController {
     private final KeycloakAdminService keycloakAdminService;
 
     @GetMapping("/credentials")
-    @PreAuthorize("@authService.isCompanyAdmin()")
     @SecurityRequirement(name = "keycloak")
     @Operation(summary = "Obter credenciais da empresa atual", 
                description = "Retorna client_id e client_secret da empresa do usuário logado")
@@ -56,10 +54,9 @@ public class CompanyCredentialsController {
     }
 
     @PostMapping("/credentials/regenerate")
-    @PreAuthorize("@authService.isCompanyAdmin()")
     @SecurityRequirement(name = "keycloak")
     @Operation(summary = "Regenerar client secret", 
-               description = "Regenera o client_secret da empresa atual. Apenas admins podem fazer isso.")
+               description = "Regenera o client_secret da empresa atual.")
     public ResponseEntity<Map<String, String>> regenerateClientSecret() {
         
         Company company = authService.getCurrentCompany()
@@ -92,7 +89,6 @@ public class CompanyCredentialsController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("@authService.isCompanyAdmin()")
     @SecurityRequirement(name = "keycloak")
     @Operation(summary = "Listar usuários da empresa atual", 
                description = "Retorna todos os usuários da empresa do usuário logado")

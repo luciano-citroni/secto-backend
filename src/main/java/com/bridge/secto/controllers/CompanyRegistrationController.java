@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,10 +40,9 @@ public class CompanyRegistrationController {
     }
 
     @PostMapping("/company/users")
-    @PreAuthorize("@authService.isCompanyAdmin()")
     @SecurityRequirement(name = "keycloak")
     @Operation(summary = "Adicionar usuário à empresa", 
-               description = "Apenas admins da empresa podem adicionar usuários")
+               description = "Adicionar usuários à empresa")
     public ResponseEntity<?> addUserToCompany(@RequestBody Map<String, String> userData) {
         
         UUID companyId = authService.getCurrentUser()

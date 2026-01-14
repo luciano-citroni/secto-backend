@@ -30,6 +30,8 @@ public class AuthService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            log.debug("JWT claims: {}", jwt.getClaims());
+            
             // Verificar se é client credentials (service account)
             if (isServiceAccount(jwt)) {
                 String clientId = jwt.getClaimAsString("client_id");
@@ -43,14 +45,24 @@ public class AuthService {
                     return companyRepository.findByClientId(clientId);
                 }
             } else {
-                // É um usuário normal, usar company_id do token
-                String companyIdString = jwt.getClaimAsString("company_id");
+                // É um usuário normal, usar companyId do token
+                String companyIdString = jwt.getClaimAsString("companyId");
+                log.debug("Company ID do token: {}", companyIdString);
+                
                 if (companyIdString != null) {
                     try {
                         UUID companyId = UUID.fromString(companyIdString);
                         return companyRepository.findById(companyId);
                     } catch (Exception e) {
-                        log.error("Erro ao converter company_id: {}", companyIdString, e);
+                        log.error("Erro ao converter companyId: {}", companyIdString, e);
+                    }
+                } else {
+                    // Fallback: buscar company do usuário através do keycloak_id
+                    String keycloakId = jwt.getSubject();
+                    log.debug("Tentando buscar company através do keycloakId: {}", keycloakId);
+                    Optional<UserInfo> userInfo = getCurrentUser();
+                    if (userInfo.isPresent() && userInfo.get().getCompanyId() != null) {
+                        return companyRepository.findById(userInfo.get().getCompanyId());
                     }
                 }
             }
