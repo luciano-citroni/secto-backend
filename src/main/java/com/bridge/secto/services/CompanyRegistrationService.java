@@ -1,6 +1,7 @@
 package com.bridge.secto.services;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -26,10 +27,8 @@ public class CompanyRegistrationService {
     @Transactional
     public CompanyRegistrationResponse registerCompany(CompanyRegistrationRequest request) {
         try {
-            // 1. Criar empresa no banco
             Company company = createCompany(request);
             
-            // 2. Criar admin no Keycloak
             String adminKeycloakId = keycloakAdminService.createUser(
                 request.getAdminFirstName(),
                 request.getAdminLastName(), 
@@ -64,15 +63,35 @@ public class CompanyRegistrationService {
         CompanyCredit credit = new CompanyCredit();
         credit.setCreditAmount(BigDecimal.valueOf(100.00)); // Crédito inicial
         
-        // Criar empresa
+        String clientId = UUID.randomUUID().toString();
+        
         Company company = new Company();
         company.setName(request.getCompanyName());
         company.setCompanyCredit(credit);
+        company.setClientId(clientId);
         
         // Estabelecer relação bidirecional
         credit.setCompany(company);
         
-        return companyRepository.save(company);
+        // Salvar primeiro para ter o ID da empresa
+        company = companyRepository.save(company);
+        
+        // Criar client no Keycloak
+        try {
+            Map<String, String> clientCredentials = keycloakAdminService.createClientCredentials(clientId, company.getName());
+            company.setClientSecret(clientCredentials.get("clientSecret"));
+            
+            // Salvar novamente com o client_secret
+            company = companyRepository.save(company);
+            
+            log.info("Client credentials criado para empresa {}: clientId={}", company.getName(), clientId);
+        } catch (Exception e) {
+            log.error("Erro ao criar client credentials para empresa {}: {}", company.getName(), e.getMessage());
+            // Não falhar a criação da empresa se houver erro no client
+            log.warn("Empresa criada sem client credentials");
+        }
+        
+        return company;
     }
 
     /**

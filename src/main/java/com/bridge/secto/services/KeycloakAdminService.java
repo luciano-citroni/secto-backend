@@ -1,5 +1,8 @@
 package com.bridge.secto.services;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -162,5 +165,190 @@ public class KeycloakAdminService {
     private void assignCompanyUserRole(String userId, String token) {
         // Implementar atribuição de role company-user
         log.info("Atribuindo role company-user ao usuário: {}", userId);
+    }
+
+    /**
+     * Criar client no Keycloak para acesso via client credentials
+     */
+    public Map<String, String> createClientCredentials(String clientId, String companyName) {
+        try {
+            String adminToken = getAdminToken();
+            
+            // Gerar client secret
+            String clientSecret = UUID.randomUUID().toString();
+            
+            // Payload para criar client
+            Map<String, Object> clientPayload = new HashMap<>();
+            clientPayload.put("clientId", clientId);
+            clientPayload.put("name", "Client para " + companyName);
+            clientPayload.put("description", "Client credentials para acesso à API da empresa " + companyName);
+            clientPayload.put("enabled", true);
+            clientPayload.put("clientAuthenticatorType", "client-secret");
+            clientPayload.put("secret", clientSecret);
+            clientPayload.put("standardFlowEnabled", false);
+            clientPayload.put("implicitFlowEnabled", false);
+            clientPayload.put("directAccessGrantsEnabled", false);
+            clientPayload.put("serviceAccountsEnabled", true);
+            clientPayload.put("authorizationServicesEnabled", false);
+            clientPayload.put("publicClient", false);
+            clientPayload.put("protocol", "openid-connect");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(clientPayload, headers);
+            
+            String createClientUrl = String.format("%s/admin/realms/%s/clients", getNormalizedBaseUrl(), realm);
+            log.info("Creating client at URL: {}", createClientUrl);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(createClientUrl, request, String.class);
+            
+            if (response.getStatusCode() == HttpStatus.CREATED) {
+                log.info("Client criado com sucesso: {} para empresa: {}", clientId, companyName);
+                return Map.of(
+                    "clientId", clientId,
+                    "clientSecret", clientSecret
+                );
+            }
+            
+            throw new RuntimeException("Falha ao criar client: " + response.getStatusCode());
+            
+        } catch (Exception e) {
+            log.error("Erro ao criar client no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao criar client: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Regenerar client secret de um client existente
+     */
+    public Map<String, String> regenerateClientSecret(String clientId, String companyName) {
+        try {
+            String adminToken = getAdminToken();
+            
+            // 1. Buscar o client no Keycloak
+            String getClientsUrl = String.format("%s/admin/realms/%s/clients?clientId=%s", 
+                getNormalizedBaseUrl(), realm, clientId);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(adminToken);
+            
+            HttpEntity<Void> getRequest = new HttpEntity<>(headers);
+            ResponseEntity<Object[]> getResponse = restTemplate.exchange(
+                getClientsUrl, 
+                org.springframework.http.HttpMethod.GET, 
+                getRequest, 
+                Object[].class
+            );
+            
+            if (getResponse.getBody() == null || getResponse.getBody().length == 0) {
+                throw new RuntimeException("Client não encontrado: " + clientId);
+            }
+            
+            // Extrair o ID interno do client
+            @SuppressWarnings("unchecked")
+            Map<String, Object> clientData = (Map<String, Object>) getResponse.getBody()[0];
+            String internalClientId = (String) clientData.get("id");
+            
+            // 2. Gerar novo client secret
+            String newClientSecret = UUID.randomUUID().toString();
+            
+            // 3. Atualizar o client com o novo secret
+            String updateClientUrl = String.format("%s/admin/realms/%s/clients/%s", 
+                getNormalizedBaseUrl(), realm, internalClientId);
+            
+            Map<String, Object> updatePayload = new HashMap<>();
+            updatePayload.put("secret", newClientSecret);
+            
+            HttpHeaders updateHeaders = new HttpHeaders();
+            updateHeaders.setContentType(MediaType.APPLICATION_JSON);
+            updateHeaders.setBearerAuth(adminToken);
+            
+            HttpEntity<Map<String, Object>> updateRequest = new HttpEntity<>(updatePayload, updateHeaders);
+            
+            ResponseEntity<String> updateResponse = restTemplate.exchange(
+                updateClientUrl,
+                org.springframework.http.HttpMethod.PUT,
+                updateRequest,
+                String.class
+            );
+            
+            if (updateResponse.getStatusCode().is2xxSuccessful()) {
+                log.info("Client secret regenerado com sucesso para: {} (empresa: {})", clientId, companyName);
+                return Map.of(
+                    "clientId", clientId,
+                    "clientSecret", newClientSecret
+                );
+            }
+            
+            throw new RuntimeException("Falha ao regenerar client secret: " + updateResponse.getStatusCode());
+            
+        } catch (Exception e) {
+            log.error("Erro ao regenerar client secret no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao regenerar client secret: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Buscar usuários de uma empresa específica no Keycloak
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getCompanyUsers(UUID companyId) {
+        try {
+            String adminToken = getAdminToken();
+            
+            // Buscar usuários no Keycloak
+            String getUsersUrl = String.format("%s/admin/realms/%s/users?max=1000", 
+                getNormalizedBaseUrl(), realm);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(adminToken);
+            
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<List> response = restTemplate.exchange(
+                getUsersUrl, 
+                org.springframework.http.HttpMethod.GET, 
+                request, 
+                List.class
+            );
+            
+            if (response.getBody() == null) {
+                return List.of();
+            }
+            
+            // Filtrar usuários pela company_id
+            List<Map<String, Object>> allUsers = (List<Map<String, Object>>) response.getBody();
+            List<Map<String, Object>> companyUsers = new ArrayList<>();
+            
+            for (Map<String, Object> user : allUsers) {
+                Map<String, Object> attributes = (Map<String, Object>) user.get("attributes");
+                if (attributes != null && attributes.containsKey("company_id")) {
+                    Object companyIdAttr = attributes.get("company_id");
+                    String userCompanyId = null;
+                    
+                    // company_id pode vir como String ou List<String>
+                    if (companyIdAttr instanceof List) {
+                        List<String> companyIdList = (List<String>) companyIdAttr;
+                        if (!companyIdList.isEmpty()) {
+                            userCompanyId = companyIdList.get(0);
+                        }
+                    } else if (companyIdAttr instanceof String) {
+                        userCompanyId = (String) companyIdAttr;
+                    }
+                    
+                    if (companyId.toString().equals(userCompanyId)) {
+                        companyUsers.add(user);
+                    }
+                }
+            }
+            
+            log.info("Encontrados {} usuários para a empresa: {}", companyUsers.size(), companyId);
+            return companyUsers;
+            
+        } catch (Exception e) {
+            log.error("Erro ao buscar usuários da empresa no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao buscar usuários da empresa: " + e.getMessage());
+        }
     }
 }

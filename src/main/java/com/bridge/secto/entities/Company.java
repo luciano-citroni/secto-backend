@@ -24,6 +24,12 @@ public class Company extends BaseEntity {
     @Column(name = "owner_id")
     private UUID ownerId;
 
+    @Column(name = "client_id")
+    private String clientId;
+
+    @Column(name = "client_secret")
+    private String clientSecret;
+
     @OneToOne(cascade = CascadeType.ALL, fetch=FetchType.LAZY)
     @JoinColumn(name = "company_credit_id", referencedColumnName = "id")
     private CompanyCredit companyCredit;
