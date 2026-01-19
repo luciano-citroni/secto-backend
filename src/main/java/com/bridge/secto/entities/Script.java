@@ -29,8 +29,8 @@ public class Script extends BaseEntity{
     private List<ScriptItem> scriptItems;
     
     @ManyToOne
-    @JoinColumn(name = "service_sub_type_id", nullable = false)
-    private ServiceSubType serviceSubType;
+    @JoinColumn(name = "service_type_id", nullable = false)
+    private ServiceType serviceType;
 
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="company_id", nullable = false)    

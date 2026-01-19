@@ -25,12 +25,8 @@ public class ServiceSubType extends BaseEntity{
     @Column()
     private String description;
 
-    @ManyToOne
-    @JoinColumn(name="service_type_id", nullable = false)
-    private ServiceType serviceType;
-
     @OneToMany(mappedBy = "serviceSubType", cascade=CascadeType.ALL)
-    private List<Script> scripts;
+    private List<ServiceType> serviceTypes;
 
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="company_id", nullable = false)    

@@ -40,12 +40,12 @@ public class ServiceType extends BaseEntity {
     @Column()
     private String description;
 
-    @Schema(
-        description = "Lista de subtipos de serviço associados a este tipo",
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_sub_type_id", nullable = false)
+    private ServiceSubType serviceSubType;
+
     @OneToMany(mappedBy = "serviceType", cascade=CascadeType.ALL)
-    private List<ServiceSubType> serviceSubTypes;
+    private List<Script> scripts;
 
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="company_id", nullable = false)    

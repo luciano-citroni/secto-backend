@@ -9,5 +9,5 @@ import com.bridge.secto.entities.ServiceSubType;
 
 @Repository
 public interface ServiceSubTypeRepository extends JpaRepository<ServiceSubType, UUID> {
-    java.util.List<ServiceSubType> findByServiceTypeId(UUID serviceTypeId);
+    java.util.List<ServiceSubType> findByCompanyId(UUID companyId);
 }

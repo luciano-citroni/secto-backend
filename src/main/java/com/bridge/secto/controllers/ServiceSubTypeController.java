@@ -6,17 +6,16 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.dtos.ServiceSubTypeResponseDto;
+import com.bridge.secto.entities.Company;
 import com.bridge.secto.entities.ServiceSubType;
-import com.bridge.secto.entities.ServiceType;
+import com.bridge.secto.repositories.CompanyRepository;
 import com.bridge.secto.repositories.ServiceSubTypeRepository;
-import com.bridge.secto.repositories.ServiceTypeRepository;
 import com.bridge.secto.services.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,25 +28,18 @@ import lombok.RequiredArgsConstructor;
 public class ServiceSubTypeController {
 
     private final ServiceSubTypeRepository serviceSubTypeRepository;
-    private final ServiceTypeRepository serviceTypeRepository;
+    private final CompanyRepository companyRepository;
     private final AuthService authService;
 
-    @Operation(summary = "Get Service Sub Types by Service Type")
+    @Operation(summary = "Get Service Sub Types by Company")
     @ApiResponse(responseCode = "200", description = "Successful operation")
-    @GetMapping("/byServiceType/{serviceTypeId}")
-    public ResponseEntity<List<ServiceSubTypeResponseDto>> getServiceSubTypesByServiceType(@PathVariable UUID serviceTypeId) {
+    @GetMapping
+    public ResponseEntity<List<ServiceSubTypeResponseDto>> getServiceSubTypes() {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
             .orElseThrow(() -> new RuntimeException("User not associated with any company"));
 
-        ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
-            .orElseThrow(() -> new RuntimeException("ServiceType not found"));
-
-        if (!serviceType.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
-        }
-
-        List<ServiceSubTypeResponseDto> dtos = serviceSubTypeRepository.findByServiceTypeId(serviceTypeId).stream()
+        List<ServiceSubTypeResponseDto> dtos = serviceSubTypeRepository.findByCompanyId(userCompanyId).stream()
             .map(subType -> {
                 ServiceSubTypeResponseDto dto = new ServiceSubTypeResponseDto();
                 dto.setId(subType.getId());
@@ -61,24 +53,20 @@ public class ServiceSubTypeController {
 
     @Operation(summary = "Create Service Sub Type")
     @ApiResponse(responseCode = "200", description = "Successful operation")
-    @PostMapping("/byServiceType/{serviceTypeId}")
-    public ResponseEntity<ServiceSubTypeResponseDto> createServiceSubType(@PathVariable UUID serviceTypeId, @RequestBody ServiceSubType request) {
+    @PostMapping
+    public ResponseEntity<ServiceSubTypeResponseDto> createServiceSubType(@RequestBody ServiceSubType request) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
             .orElseThrow(() -> new RuntimeException("User not associated with any company"));
 
-        ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
-            .orElseThrow(() -> new RuntimeException("ServiceType not found with id: " + serviceTypeId));
-        
-        if (!serviceType.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
-        }
+        Company company = companyRepository.findById(userCompanyId)
+             .orElseThrow(() -> new RuntimeException("Company not found")); // Assuming authService returns valid ID, but good to check or load proxy
 
         ServiceSubType serviceSubType = new ServiceSubType();
         serviceSubType.setName(request.getName());
         serviceSubType.setDescription(request.getDescription());
-        serviceSubType.setServiceType(serviceType);
-        serviceSubType.setCompany(serviceType.getCompany());
+        // serviceSubType.setServiceType(serviceType); // REMOVED
+        serviceSubType.setCompany(company);
         
         serviceSubTypeRepository.save(serviceSubType);
         

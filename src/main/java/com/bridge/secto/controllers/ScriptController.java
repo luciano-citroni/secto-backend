@@ -17,9 +17,9 @@ import com.bridge.secto.dtos.ScriptItemResponseDto;
 import com.bridge.secto.dtos.ScriptResponseDto;
 import com.bridge.secto.entities.Script;
 import com.bridge.secto.entities.ScriptItem;
-import com.bridge.secto.entities.ServiceSubType;
+import com.bridge.secto.entities.ServiceType;
 import com.bridge.secto.repositories.ScriptRepository;
-import com.bridge.secto.repositories.ServiceSubTypeRepository;
+import com.bridge.secto.repositories.ServiceTypeRepository;
 import com.bridge.secto.services.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class ScriptController {
 
     private final ScriptRepository scriptRepository;
-    private final ServiceSubTypeRepository serviceSubTypeRepository;
+    private final ServiceTypeRepository serviceTypeRepository;
     private final AuthService authService;
 
     private ScriptItemResponseDto mapToScriptItemDto(ScriptItem item) {
@@ -56,22 +56,22 @@ public class ScriptController {
         return dto;
     }
 
-    @Operation(summary = "Get Scripts by Service Sub Type")
+    @Operation(summary = "Get Scripts by Service Type")
     @ApiResponse(responseCode = "200", description = "Successful operation")
-    @GetMapping("/byServiceSubType/{serviceSubTypeId}")
-    public ResponseEntity<List<ScriptResponseDto>> getScriptsByServiceSubType(@PathVariable UUID serviceSubTypeId) {
+    @GetMapping("/byServiceType/{serviceTypeId}")
+    public ResponseEntity<List<ScriptResponseDto>> getScriptsByServiceType(@PathVariable UUID serviceTypeId) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
             .orElseThrow(() -> new RuntimeException("User not associated with any company"));
 
-        ServiceSubType serviceSubType = serviceSubTypeRepository.findById(serviceSubTypeId)
-            .orElseThrow(() -> new RuntimeException("ServiceSubType not found"));
+        ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
+            .orElseThrow(() -> new RuntimeException("ServiceType not found"));
 
-        if (!serviceSubType.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: ServiceSubType does not belong to your company");
+        if (!serviceType.getCompany().getId().equals(userCompanyId)) {
+            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
         }
 
-        List<ScriptResponseDto> dtos = scriptRepository.findByServiceSubTypeId(serviceSubTypeId).stream()
+        List<ScriptResponseDto> dtos = scriptRepository.findByServiceTypeId(serviceTypeId).stream()
             .map(this::mapToScriptDto)
             .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
@@ -133,24 +133,24 @@ public class ScriptController {
 
     @Operation(summary = "Create Script")
     @ApiResponse(responseCode = "200", description = "Successful operation")
-    @PostMapping("/byServiceSubType/{serviceSubTypeId}")
-    public ResponseEntity<ScriptResponseDto> createScript(@PathVariable UUID serviceSubTypeId, @RequestBody Script request) {
+    @PostMapping("/byServiceType/{serviceTypeId}")
+    public ResponseEntity<ScriptResponseDto> createScript(@PathVariable UUID serviceTypeId, @RequestBody Script request) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
             .orElseThrow(() -> new RuntimeException("User not associated with any company"));
 
-        ServiceSubType serviceSubType = serviceSubTypeRepository.findById(serviceSubTypeId)
-            .orElseThrow(() -> new RuntimeException("ServiceSubType not found with id: " + serviceSubTypeId));
+        ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
+            .orElseThrow(() -> new RuntimeException("ServiceType not found with id: " + serviceTypeId));
         
-        if (!serviceSubType.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: ServiceSubType does not belong to your company");
+        if (!serviceType.getCompany().getId().equals(userCompanyId)) {
+            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
         }
 
         Script script = new Script();
         script.setName(request.getName());
         script.setStatus(request.getStatus());
-        script.setServiceSubType(serviceSubType);
-        script.setCompany(serviceSubType.getCompany()); // Inherit company from ServiceSubType
+        script.setServiceType(serviceType);
+        script.setCompany(serviceType.getCompany()); // Inherit company from ServiceType
         
         if (request.getScriptItems() != null) {
             List<ScriptItem> items = request.getScriptItems().stream()
