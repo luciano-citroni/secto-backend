@@ -37,6 +37,10 @@ public class AnalysisResult extends BaseEntity {
     @Column(name = "ai_output_json", columnDefinition = "TEXT")
     private String aiOutputJson;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "script_id")
+    private Script script;
+
     private Boolean approved;
 
     @ManyToOne(fetch = FetchType.LAZY)

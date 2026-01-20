@@ -25,6 +25,9 @@ public class ServiceSubType extends BaseEntity{
     @Column()
     private String description;
 
+    @Column()
+    private Boolean status;
+
     @OneToMany(mappedBy = "serviceSubType", cascade=CascadeType.ALL)
     private List<ServiceType> serviceTypes;
 

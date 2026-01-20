@@ -10,4 +10,5 @@ import com.bridge.secto.entities.Script;
 @Repository
 public interface ScriptRepository extends JpaRepository<Script, UUID> {
     java.util.List<Script> findByServiceTypeId(UUID serviceTypeId);
+    java.util.List<Script> findByCompanyId(UUID companyId);
 }

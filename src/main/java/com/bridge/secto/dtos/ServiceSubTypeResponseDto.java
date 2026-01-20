@@ -9,4 +9,5 @@ public class ServiceSubTypeResponseDto {
     private UUID id;
     private String name;
     private String description;
+    private Boolean status;
 }

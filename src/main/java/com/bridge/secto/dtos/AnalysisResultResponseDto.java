@@ -17,4 +17,9 @@ public class AnalysisResultResponseDto {
     private JsonNode aiOutput;
     private Boolean approved;
     private Instant createdAt;
+    private UUID serviceTypeId;
+    private String serviceTypeName;
+    private UUID serviceSubTypeId;
+    private String serviceSubTypeName;
+    private String scriptName;
 }

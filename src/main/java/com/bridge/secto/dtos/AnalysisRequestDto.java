@@ -1,6 +1,7 @@
 package com.bridge.secto.dtos;
 
 import java.util.List;
+import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -14,6 +15,9 @@ public class AnalysisRequestDto {
 
     @Schema(description = "Texto da transcrição (opcional se enviar arquivo de áudio)", example = "Meu nome é João...")
     private String transcription;
+
+    @Schema(description = "ID do script utilizado")
+    private UUID scriptId;
 
     @Schema(description = "Lista de itens do script (perguntas e respostas esperadas)")
     private List<ScriptItemInputDto> scriptItems;

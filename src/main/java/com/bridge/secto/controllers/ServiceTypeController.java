@@ -32,6 +32,28 @@ public class ServiceTypeController {
     private final ServiceSubTypeRepository serviceSubTypeRepository;
     private final AuthService authService;
 
+    @Operation(summary = "Get All Service Types by Company")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @GetMapping
+    public ResponseEntity<List<ServiceTypeResponseDto>> getServiceTypes() {
+        UUID companyId = authService.getCurrentCompanyId();
+        List<ServiceTypeResponseDto> dtos = serviceTypeRepository.findByCompanyId(companyId).stream()
+            .map(serviceType -> {
+                ServiceTypeResponseDto dto = new ServiceTypeResponseDto();
+                dto.setId(serviceType.getId());
+                dto.setName(serviceType.getName());
+                dto.setDescription(serviceType.getDescription());
+                dto.setStatus(serviceType.getStatus());
+                if (serviceType.getServiceSubType() != null) {
+                    dto.setServiceSubTypeId(serviceType.getServiceSubType().getId());
+                    dto.setServiceSubTypeName(serviceType.getServiceSubType().getName());
+                }
+                return dto;
+            })
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
     @Operation(summary = "Get Service Types by Service Sub Type")
     @ApiResponse(responseCode = "200", description = "Successful operation")
     @GetMapping("/byServiceSubType/{serviceSubTypeId}")
@@ -51,6 +73,10 @@ public class ServiceTypeController {
                 dto.setId(serviceType.getId());
                 dto.setName(serviceType.getName());
                 dto.setDescription(serviceType.getDescription());
+                dto.setStatus(serviceType.getStatus());
+                // Populate SubType info since we have it
+                dto.setServiceSubTypeId(subType.getId());
+                dto.setServiceSubTypeName(subType.getName());
                 return dto;
             })
             .collect(Collectors.toList());
@@ -72,6 +98,7 @@ public class ServiceTypeController {
         ServiceType serviceType = new ServiceType();
         serviceType.setName(request.getName());
         serviceType.setDescription(request.getDescription());
+        serviceType.setStatus(request.getStatus() != null ? request.getStatus() : true);
         serviceType.setCompany(subType.getCompany());
         serviceType.setServiceSubType(subType);
         
@@ -81,6 +108,7 @@ public class ServiceTypeController {
         dto.setId(serviceType.getId());
         dto.setName(serviceType.getName());
         dto.setDescription(serviceType.getDescription());
+        dto.setStatus(serviceType.getStatus());
         
         return ResponseEntity.ok(dto);
     }

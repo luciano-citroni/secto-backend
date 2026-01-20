@@ -40,6 +40,9 @@ public class ServiceType extends BaseEntity {
     @Column()
     private String description;
 
+    @Column()
+    private Boolean status;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_sub_type_id", nullable = false)
     private ServiceSubType serviceSubType;

@@ -67,7 +67,8 @@ public class OpenAIController {
             request.getScriptItems(), 
             request.getClientName(), 
             audioFilename,
-            audioUrl
+            audioUrl,
+            request.getScriptId()
         );
         return ResponseEntity.ok(response);
     }

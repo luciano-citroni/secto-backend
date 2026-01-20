@@ -35,6 +35,20 @@ public class ScriptController {
     private final ServiceTypeRepository serviceTypeRepository;
     private final AuthService authService;
 
+    @Operation(summary = "Get All Scripts by Company")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @GetMapping
+    public ResponseEntity<List<ScriptResponseDto>> getAllScripts() {
+        UUID userCompanyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
+        List<ScriptResponseDto> dtos = scriptRepository.findByCompanyId(userCompanyId).stream()
+            .map(this::mapToScriptDto)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
     private ScriptItemResponseDto mapToScriptItemDto(ScriptItem item) {
         ScriptItemResponseDto dto = new ScriptItemResponseDto();
         dto.setId(item.getId());
@@ -52,6 +66,14 @@ public class ScriptController {
             dto.setScriptItems(script.getScriptItems().stream()
                 .map(this::mapToScriptItemDto)
                 .collect(Collectors.toList()));
+        }
+        if (script.getServiceType() != null) {
+            dto.setServiceTypeId(script.getServiceType().getId());
+            dto.setServiceTypeName(script.getServiceType().getName());
+            if (script.getServiceType().getServiceSubType() != null) {
+                dto.setServiceSubTypeId(script.getServiceType().getServiceSubType().getId());
+                dto.setServiceSubTypeName(script.getServiceType().getServiceSubType().getName());
+            }
         }
         return dto;
     }

@@ -45,6 +45,7 @@ public class ServiceSubTypeController {
                 dto.setId(subType.getId());
                 dto.setName(subType.getName());
                 dto.setDescription(subType.getDescription());
+                dto.setStatus(subType.getStatus());
                 return dto;
             })
             .collect(Collectors.toList());
@@ -65,6 +66,7 @@ public class ServiceSubTypeController {
         ServiceSubType serviceSubType = new ServiceSubType();
         serviceSubType.setName(request.getName());
         serviceSubType.setDescription(request.getDescription());
+        serviceSubType.setStatus(request.getStatus() != null ? request.getStatus() : true);
         // serviceSubType.setServiceType(serviceType); // REMOVED
         serviceSubType.setCompany(company);
         
@@ -74,6 +76,7 @@ public class ServiceSubTypeController {
         dto.setId(serviceSubType.getId());
         dto.setName(serviceSubType.getName());
         dto.setDescription(serviceSubType.getDescription());
+        dto.setStatus(serviceSubType.getStatus());
         
         return ResponseEntity.ok(dto);
     }

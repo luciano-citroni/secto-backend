@@ -11,4 +11,8 @@ public class ScriptResponseDto {
     private String name;
     private Boolean status;
     private List<ScriptItemResponseDto> scriptItems;
+    private UUID serviceTypeId;
+    private String serviceTypeName;
+    private UUID serviceSubTypeId;
+    private String serviceSubTypeName;
 }

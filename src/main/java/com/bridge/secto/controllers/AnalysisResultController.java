@@ -66,6 +66,18 @@ public class AnalysisResultController {
         dto.setApproved(entity.getApproved());
         dto.setCreatedAt(entity.getCreatedAt());
 
+        if (entity.getScript() != null) {
+            dto.setScriptName(entity.getScript().getName());
+            if (entity.getScript().getServiceType() != null) {
+                dto.setServiceTypeId(entity.getScript().getServiceType().getId());
+                dto.setServiceTypeName(entity.getScript().getServiceType().getName());
+                if (entity.getScript().getServiceType().getServiceSubType() != null) {
+                    dto.setServiceSubTypeId(entity.getScript().getServiceType().getServiceSubType().getId());
+                    dto.setServiceSubTypeName(entity.getScript().getServiceType().getServiceSubType().getName());
+                }
+            }
+        }
+
         try {
             if (entity.getScriptJson() != null) {
                 dto.setScript(objectMapper.readTree(entity.getScriptJson()));
