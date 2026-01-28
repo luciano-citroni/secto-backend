@@ -132,8 +132,12 @@ public class ScriptController {
             throw new RuntimeException("Unauthorized: Script does not belong to your company");
         }
 
-        script.setName(request.getName());
-        script.setStatus(request.getStatus());
+        if (request.getName() != null) {
+            script.setName(request.getName());
+        }
+        if (request.getStatus() != null) {
+            script.setStatus(request.getStatus());
+        }
 
         // Handle Script Items Update (Full Replace Strategy for simplicity, or Merge)
         // Ideally: clear existing items and add new ones if provided, or update in place.

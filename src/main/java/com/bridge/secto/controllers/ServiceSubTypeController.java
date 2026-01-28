@@ -6,7 +6,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -69,6 +71,38 @@ public class ServiceSubTypeController {
         serviceSubType.setStatus(request.getStatus() != null ? request.getStatus() : true);
         // serviceSubType.setServiceType(serviceType); // REMOVED
         serviceSubType.setCompany(company);
+        
+        serviceSubTypeRepository.save(serviceSubType);
+        
+        ServiceSubTypeResponseDto dto = new ServiceSubTypeResponseDto();
+        dto.setId(serviceSubType.getId());
+        dto.setName(serviceSubType.getName());
+        dto.setDescription(serviceSubType.getDescription());
+        dto.setStatus(serviceSubType.getStatus());
+        
+        return ResponseEntity.ok(dto);
+    }
+
+    @Operation(summary = "Update Service Sub Type")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @PutMapping("/{id}")
+    public ResponseEntity<ServiceSubTypeResponseDto> updateServiceSubType(@PathVariable UUID id, @RequestBody ServiceSubType request) {
+        UUID userCompanyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
+        ServiceSubType serviceSubType = serviceSubTypeRepository.findById(id)
+             .orElseThrow(() -> new RuntimeException("ServiceSubType not found"));
+
+        if (!serviceSubType.getCompany().getId().equals(userCompanyId)) {
+             throw new RuntimeException("Unauthorized");
+        }
+
+        serviceSubType.setName(request.getName());
+        serviceSubType.setDescription(request.getDescription());
+        if (request.getStatus() != null) {
+            serviceSubType.setStatus(request.getStatus());
+        }
         
         serviceSubTypeRepository.save(serviceSubType);
         

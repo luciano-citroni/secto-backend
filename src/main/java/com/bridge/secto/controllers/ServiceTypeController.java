@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -109,6 +110,44 @@ public class ServiceTypeController {
         dto.setName(serviceType.getName());
         dto.setDescription(serviceType.getDescription());
         dto.setStatus(serviceType.getStatus());
+        
+        return ResponseEntity.ok(dto);
+    }
+
+    @Operation(summary = "Update Service Type")
+    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @PutMapping("/{id}")
+    public ResponseEntity<ServiceTypeResponseDto> updateServiceType(@PathVariable UUID id, @RequestBody ServiceType request) {
+        UUID userCompanyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+
+        ServiceType serviceType = serviceTypeRepository.findById(id)
+             .orElseThrow(() -> new RuntimeException("ServiceType not found"));
+
+        if (!serviceType.getCompany().getId().equals(userCompanyId)) {
+             throw new RuntimeException("Unauthorized");
+        }
+
+        serviceType.setName(request.getName());
+        serviceType.setDescription(request.getDescription());
+        if (request.getStatus() != null) {
+            serviceType.setStatus(request.getStatus());
+        }
+        
+        // Optionally allow updating subType if provided, but simpler to skip for now unless requested
+        
+        serviceTypeRepository.save(serviceType);
+        
+        ServiceTypeResponseDto dto = new ServiceTypeResponseDto();
+        dto.setId(serviceType.getId());
+        dto.setName(serviceType.getName());
+        dto.setDescription(serviceType.getDescription());
+        dto.setStatus(serviceType.getStatus());
+        if (serviceType.getServiceSubType() != null) {
+            dto.setServiceSubTypeId(serviceType.getServiceSubType().getId());
+            dto.setServiceSubTypeName(serviceType.getServiceSubType().getName());
+        }
         
         return ResponseEntity.ok(dto);
     }
