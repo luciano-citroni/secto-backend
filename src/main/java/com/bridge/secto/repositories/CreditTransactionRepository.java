@@ -9,5 +9,5 @@ import com.bridge.secto.entities.CreditTransaction;
 
 @Repository
 public interface CreditTransactionRepository extends JpaRepository<CreditTransaction, UUID> {
-    
+    boolean existsByStripeSessionId(String stripeSessionId);
 }

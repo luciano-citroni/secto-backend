@@ -23,4 +23,7 @@ public class CreditTransaction extends BaseEntity {
 
     @Column(precision=19, scale=2, nullable = false)
     private BigDecimal amount;
+
+    @Column(name = "stripe_session_id")
+    private String stripeSessionId;
 }

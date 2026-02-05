@@ -16,6 +16,8 @@ import com.bridge.secto.dtos.CompanyCreditRequest;
 import com.bridge.secto.dtos.CompanyCreditResponseDto;
 import com.bridge.secto.entities.Company;
 import com.bridge.secto.entities.CompanyCredit;
+import com.bridge.secto.exceptions.BusinessRuleException;
+import com.bridge.secto.exceptions.ResourceNotFoundException;
 import com.bridge.secto.repositories.CompanyRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -32,10 +34,10 @@ public class CompanyCreditController {
     @Transactional
     public ResponseEntity<CompanyCredit> createCompanyCredit(@RequestBody CompanyCreditRequest request) {
         Company company = companyRepository.findById(request.getCompany())
-                .orElseThrow(() -> new RuntimeException("Company not found with id: " + request.getCompany()));
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found with id: " + request.getCompany()));
 
         if (company.getCompanyCredit() != null) {
-            throw new RuntimeException("Company already has a credit account");
+            throw new BusinessRuleException("Company already has a credit account");
         }
 
         CompanyCredit credit = new CompanyCredit();
@@ -54,7 +56,7 @@ public class CompanyCreditController {
     @Transactional(readOnly = true)
     public ResponseEntity<CompanyCreditResponseDto> getCompanyCreditByCompanyId(@PathVariable("id") UUID companyId) {
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found with id: " + companyId));
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found with id: " + companyId));
         
         if (company.getCompanyCredit() == null) {
             return ResponseEntity.notFound().build();

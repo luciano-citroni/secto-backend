@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.dtos.CompanyRegistrationRequest;
 import com.bridge.secto.dtos.CompanyRegistrationResponse;
+import com.bridge.secto.exceptions.UnauthorizedActionException;
 import com.bridge.secto.services.AuthService;
 import com.bridge.secto.services.CompanyRegistrationService;
 
@@ -47,7 +48,7 @@ public class CompanyRegistrationController {
         
         UUID companyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("Company ID não encontrado"));
+            .orElseThrow(() -> new UnauthorizedActionException("Company ID não encontrado"));
 
         String userId = registrationService.addUserToCompany(
             userData.get("firstName"),

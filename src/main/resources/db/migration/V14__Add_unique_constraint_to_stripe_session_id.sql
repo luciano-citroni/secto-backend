@@ -1,0 +1,1 @@
+ALTER TABLE secto.credit_transaction ADD CONSTRAINT uk_credit_transaction_stripe_session_id UNIQUE (stripe_session_id);

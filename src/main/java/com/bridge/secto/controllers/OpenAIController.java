@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.bridge.secto.dtos.AnalysisRequestDto;
 import com.bridge.secto.dtos.OpenAiAnalysisResponseDTO;
+import com.bridge.secto.exceptions.BusinessRuleException;
 import com.bridge.secto.services.OpenAIService;
 import com.bridge.secto.services.S3StorageService;
 
@@ -59,7 +60,7 @@ public class OpenAIController {
         }
 
         if (transcription == null || transcription.isBlank()) {
-            return ResponseEntity.badRequest().build();
+            throw new BusinessRuleException("Transcription or audio file is required.");
         }
         
         OpenAiAnalysisResponseDTO response = openAIService.compareTranscribedTextAndScript(

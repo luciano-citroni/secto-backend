@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.dtos.AnalysisResultResponseDto;
 import com.bridge.secto.entities.AnalysisResult;
+import com.bridge.secto.exceptions.ResourceNotFoundException;
+import com.bridge.secto.exceptions.UnauthorizedActionException;
 import com.bridge.secto.repositories.AnalysisResultRepository;
 import com.bridge.secto.services.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,7 +37,7 @@ public class AnalysisResultController {
     public ResponseEntity<List<AnalysisResultResponseDto>> getAll() {
         UUID companyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         List<AnalysisResultResponseDto> list = repository.findByCompanyId(companyId).stream()
                 .map(this::toDto)
@@ -48,13 +50,16 @@ public class AnalysisResultController {
     public ResponseEntity<AnalysisResultResponseDto> getById(@PathVariable UUID id) {
         UUID companyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
-        return repository.findById(id)
-                .filter(result -> result.getCompany().getId().equals(companyId))
-                .map(this::toDto)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        AnalysisResult result = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Analysis result not found"));
+        
+        if (!result.getCompany().getId().equals(companyId)) {
+             throw new ResourceNotFoundException("Analysis result not found"); // Hide existence
+        }
+        
+        return ResponseEntity.ok(toDto(result));
     }
 
     private AnalysisResultResponseDto toDto(AnalysisResult entity) {

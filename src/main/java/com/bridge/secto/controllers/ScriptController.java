@@ -18,6 +18,8 @@ import com.bridge.secto.dtos.ScriptResponseDto;
 import com.bridge.secto.entities.Script;
 import com.bridge.secto.entities.ScriptItem;
 import com.bridge.secto.entities.ServiceType;
+import com.bridge.secto.exceptions.ResourceNotFoundException;
+import com.bridge.secto.exceptions.UnauthorizedActionException;
 import com.bridge.secto.repositories.ScriptRepository;
 import com.bridge.secto.repositories.ServiceTypeRepository;
 import com.bridge.secto.services.AuthService;
@@ -41,7 +43,7 @@ public class ScriptController {
     public ResponseEntity<List<ScriptResponseDto>> getAllScripts() {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         List<ScriptResponseDto> dtos = scriptRepository.findByCompanyId(userCompanyId).stream()
             .map(this::mapToScriptDto)
@@ -84,13 +86,13 @@ public class ScriptController {
     public ResponseEntity<List<ScriptResponseDto>> getScriptsByServiceType(@PathVariable UUID serviceTypeId) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
-            .orElseThrow(() -> new RuntimeException("ServiceType not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("ServiceType not found"));
 
         if (!serviceType.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
+            throw new UnauthorizedActionException("Unauthorized: ServiceType does not belong to your company");
         }
 
         List<ScriptResponseDto> dtos = scriptRepository.findByServiceTypeId(serviceTypeId).stream()
@@ -105,13 +107,13 @@ public class ScriptController {
     public ResponseEntity<ScriptResponseDto> getScriptById(@PathVariable UUID id) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         Script script = scriptRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Script not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Script not found"));
 
         if (!script.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: Script does not belong to your company");
+            throw new UnauthorizedActionException("Unauthorized: Script does not belong to your company");
         }
 
         return ResponseEntity.ok(mapToScriptDto(script));
@@ -123,13 +125,13 @@ public class ScriptController {
     public ResponseEntity<ScriptResponseDto> updateScript(@PathVariable UUID id, @RequestBody Script request) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         Script script = scriptRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Script not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Script not found"));
 
         if (!script.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: Script does not belong to your company");
+            throw new UnauthorizedActionException("Unauthorized: Script does not belong to your company");
         }
 
         if (request.getName() != null) {
@@ -163,13 +165,13 @@ public class ScriptController {
     public ResponseEntity<ScriptResponseDto> createScript(@PathVariable UUID serviceTypeId, @RequestBody Script request) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         ServiceType serviceType = serviceTypeRepository.findById(serviceTypeId)
-            .orElseThrow(() -> new RuntimeException("ServiceType not found with id: " + serviceTypeId));
+            .orElseThrow(() -> new ResourceNotFoundException("ServiceType not found with id: " + serviceTypeId));
         
         if (!serviceType.getCompany().getId().equals(userCompanyId)) {
-            throw new RuntimeException("Unauthorized: ServiceType does not belong to your company");
+            throw new UnauthorizedActionException("Unauthorized: ServiceType does not belong to your company");
         }
 
         Script script = new Script();

@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.bridge.secto.dtos.ServiceSubTypeResponseDto;
 import com.bridge.secto.entities.Company;
 import com.bridge.secto.entities.ServiceSubType;
+import com.bridge.secto.exceptions.ResourceNotFoundException;
+import com.bridge.secto.exceptions.UnauthorizedActionException;
 import com.bridge.secto.repositories.CompanyRepository;
 import com.bridge.secto.repositories.ServiceSubTypeRepository;
 import com.bridge.secto.services.AuthService;
@@ -39,7 +41,7 @@ public class ServiceSubTypeController {
     public ResponseEntity<List<ServiceSubTypeResponseDto>> getServiceSubTypes() {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         List<ServiceSubTypeResponseDto> dtos = serviceSubTypeRepository.findByCompanyId(userCompanyId).stream()
             .map(subType -> {
@@ -60,10 +62,10 @@ public class ServiceSubTypeController {
     public ResponseEntity<ServiceSubTypeResponseDto> createServiceSubType(@RequestBody ServiceSubType request) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         Company company = companyRepository.findById(userCompanyId)
-             .orElseThrow(() -> new RuntimeException("Company not found")); // Assuming authService returns valid ID, but good to check or load proxy
+             .orElseThrow(() -> new ResourceNotFoundException("Company not found")); // Assuming authService returns valid ID, but good to check or load proxy
 
         ServiceSubType serviceSubType = new ServiceSubType();
         serviceSubType.setName(request.getName());
@@ -89,13 +91,13 @@ public class ServiceSubTypeController {
     public ResponseEntity<ServiceSubTypeResponseDto> updateServiceSubType(@PathVariable UUID id, @RequestBody ServiceSubType request) {
         UUID userCompanyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
-            .orElseThrow(() -> new RuntimeException("User not associated with any company"));
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
         ServiceSubType serviceSubType = serviceSubTypeRepository.findById(id)
-             .orElseThrow(() -> new RuntimeException("ServiceSubType not found"));
+             .orElseThrow(() -> new ResourceNotFoundException("ServiceSubType not found"));
 
         if (!serviceSubType.getCompany().getId().equals(userCompanyId)) {
-             throw new RuntimeException("Unauthorized");
+             throw new UnauthorizedActionException("Unauthorized");
         }
 
         serviceSubType.setName(request.getName());
