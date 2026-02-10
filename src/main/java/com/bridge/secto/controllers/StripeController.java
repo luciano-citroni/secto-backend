@@ -41,10 +41,20 @@ public class StripeController {
         }
     }
 
-    @PostMapping("/webhook")
-    public ResponseEntity<String> handleWebhook(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader) {
+    @PostMapping("/webhook/stripe/snapshot")
+    public ResponseEntity<String> handleSnapshotWebhook(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader) {
         try {
-            stripeService.handleWebhook(payload, sigHeader);
+            stripeService.handleWebhook(payload, sigHeader, "snapshot");
+            return ResponseEntity.ok("Received");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Webhook Error");
+        }
+    }
+
+    @PostMapping("/webhook/stripe/minimal")
+    public ResponseEntity<String> handleMinimalWebhook(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader) {
+        try {
+            stripeService.handleWebhook(payload, sigHeader, "minimal");
             return ResponseEntity.ok("Received");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Webhook Error");

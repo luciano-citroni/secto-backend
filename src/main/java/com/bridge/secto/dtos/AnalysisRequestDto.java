@@ -10,8 +10,8 @@ import lombok.Data;
 @Schema(description = "Dados da requisição de análise")
 public class AnalysisRequestDto {
     
-    @Schema(description = "Nome do cliente analisado", example = "João da Silva")
-    private String clientName;
+    @Schema(description = "ID do cliente selecionado")
+    private UUID clientId;
 
     @Schema(description = "Texto da transcrição (opcional se enviar arquivo de áudio)", example = "Meu nome é João...")
     private String transcription;

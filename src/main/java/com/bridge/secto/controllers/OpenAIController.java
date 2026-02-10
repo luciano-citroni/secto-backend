@@ -89,7 +89,7 @@ public class OpenAIController {
         OpenAiAnalysisResponseDTO response = openAIService.compareTranscribedTextAndScript(
             transcription, 
             request.getScriptItems(), 
-            request.getClientName(), 
+            request.getClientId(),
             audioFilename,
             audioUrl,
             request.getScriptId()
@@ -97,7 +97,13 @@ public class OpenAIController {
 
         // Descontar créditos após análise bem-sucedida
         if (audioDurationInSeconds != null && audioDurationInSeconds > 0) {
-            creditService.debitCreditsForAnalysis(request.getClientName(), audioDurationInSeconds);
+            String clientNameForCredits = null;
+            if (request.getClientId() != null) {
+                // Buscar o nome do cliente para o registro de crédito (se necessário manter compatibilidade)
+                // TODO: Considerar refatorar CreditService para usar clientId em vez de clientName
+                clientNameForCredits = "Cliente ID: " + request.getClientId();
+            }
+            creditService.debitCreditsForAnalysis(clientNameForCredits, audioDurationInSeconds);
         }
 
         return ResponseEntity.ok(response);

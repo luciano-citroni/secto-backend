@@ -1,5 +1,6 @@
 package com.bridge.secto.controllers;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -53,16 +54,21 @@ public class CompanyCreditController {
 
     @GetMapping("/byCompanyId/{id}")
     @ResponseBody
-    @Transactional(readOnly = true)
+    @Transactional
     public ResponseEntity<CompanyCreditResponseDto> getCompanyCreditByCompanyId(@PathVariable("id") UUID companyId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found with id: " + companyId));
         
-        if (company.getCompanyCredit() == null) {
-            return ResponseEntity.notFound().build();
-        }
-
         CompanyCredit credit = company.getCompanyCredit();
+        
+        // Se não existe CompanyCredit, criar um com saldo zero
+        if (credit == null) {
+            credit = new CompanyCredit();
+            credit.setCreditAmount(BigDecimal.ZERO);
+            credit.setCompany(company);
+            company.setCompanyCredit(credit);
+            companyRepository.save(company);
+        }
         
         CompanyCreditResponseDto dto = new CompanyCreditResponseDto();
         dto.setId(credit.getId());

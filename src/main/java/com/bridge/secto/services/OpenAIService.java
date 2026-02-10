@@ -14,9 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 import com.bridge.secto.dtos.OpenAiAnalysisResponseDTO;
 import com.bridge.secto.dtos.ScriptItemInputDto;
 import com.bridge.secto.entities.AnalysisResult;
+import com.bridge.secto.entities.Client;
 import com.bridge.secto.entities.Company;
 import com.bridge.secto.entities.Script;
 import com.bridge.secto.repositories.AnalysisResultRepository;
+import com.bridge.secto.repositories.ClientRepository;
 import com.bridge.secto.repositories.CompanyRepository;
 import com.bridge.secto.repositories.ScriptRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,12 +38,13 @@ public class OpenAIService {
 
     private final OpenAIClient openAIClient;
     private final AnalysisResultRepository analysisResultRepository;
+    private final ClientRepository clientRepository;
     private final CompanyRepository companyRepository;
     private final ScriptRepository scriptRepository;
     private final AuthService authService;
     private final ObjectMapper objectMapper;
 
-    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, String clientName, String audioFilename, String audioUrl, UUID scriptId) {
+    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, UUID clientId, String audioFilename, String audioUrl, UUID scriptId) {
 
         String scriptText = scriptItems.stream()
                 .map(item -> String.format("Question: %s\nAnswer: %s", item.getQuestion(), item.getAnswer()))
@@ -80,8 +83,14 @@ public class OpenAIService {
                 Company company = companyRepository.findById(companyId)
                     .orElseThrow(() -> new RuntimeException("Company not found with id: " + companyId));
 
+                Client client = null;
+                if (clientId != null) {
+                    client = clientRepository.findById(clientId)
+                        .orElseThrow(() -> new RuntimeException("Client not found with id: " + clientId));
+                }
+
                 AnalysisResult result = new AnalysisResult();
-                result.setClientName(clientName);
+                result.setClient(client);
                 result.setAudioFilename(audioFilename);
                 result.setAudioUrl(audioUrl);
                 result.setTranscription(transcription);

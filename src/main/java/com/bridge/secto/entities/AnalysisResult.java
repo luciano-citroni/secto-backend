@@ -19,8 +19,9 @@ import lombok.Setter;
 @NoArgsConstructor
 public class AnalysisResult extends BaseEntity {
 
-    @Column(name = "client_name")
-    private String clientName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id")
+    private Client client;
 
     @Column(name = "audio_filename")
     private String audioFilename;

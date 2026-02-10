@@ -65,11 +65,18 @@ public class AnalysisResultController {
     private AnalysisResultResponseDto toDto(AnalysisResult entity) {
         AnalysisResultResponseDto dto = new AnalysisResultResponseDto();
         dto.setId(entity.getId());
-        dto.setClientName(entity.getClientName());
         dto.setAudioFilename(entity.getAudioFilename());
         dto.setTranscription(entity.getTranscription());
         dto.setApproved(entity.getApproved());
         dto.setCreatedAt(entity.getCreatedAt());
+
+        // Informações do cliente se estiver associado
+        if (entity.getClient() != null) {
+            dto.setClientId(entity.getClient().getId());
+            dto.setClientName(entity.getClient().getName());
+            dto.setClientSurname(entity.getClient().getSurname());
+            dto.setClientCpf(entity.getClient().getCpf());
+        }
 
         if (entity.getScript() != null) {
             dto.setScriptName(entity.getScript().getName());
