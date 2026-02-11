@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.dtos.AnalysisResultResponseDto;
@@ -33,13 +34,18 @@ public class AnalysisResultController {
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    @Operation(summary = "List analysis results by company")
-    public ResponseEntity<List<AnalysisResultResponseDto>> getAll() {
+    @Operation(summary = "List analysis results by company, optionally filtered by client")
+    public ResponseEntity<List<AnalysisResultResponseDto>> getAll(
+            @RequestParam(required = false) UUID clientId) {
         UUID companyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
             .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
 
-        List<AnalysisResultResponseDto> list = repository.findByCompanyId(companyId).stream()
+        List<AnalysisResult> results = clientId != null
+                ? repository.findByCompanyIdAndClientId(companyId, clientId)
+                : repository.findByCompanyId(companyId);
+
+        List<AnalysisResultResponseDto> list = results.stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(list);

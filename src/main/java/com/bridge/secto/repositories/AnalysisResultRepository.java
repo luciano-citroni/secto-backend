@@ -11,4 +11,5 @@ import com.bridge.secto.entities.AnalysisResult;
 @Repository
 public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, UUID> {
     List<AnalysisResult> findByCompanyId(UUID companyId);
+    List<AnalysisResult> findByCompanyIdAndClientId(UUID companyId, UUID clientId);
 }
