@@ -20,6 +20,19 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    @ApiResponse(responseCode = "404", description = "No resource found",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
+    public ResponseEntity<ApiError> handleNoResourceFoundException(org.springframework.web.servlet.resource.NoResourceFoundException ex, HttpServletRequest request) {
+        ApiError apiError = new ApiError(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return new ResponseEntity<>(apiError, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     @ApiResponse(responseCode = "404", description = "Resource not found", 
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))

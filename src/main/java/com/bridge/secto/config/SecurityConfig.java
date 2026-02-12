@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/scripts/test").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/**", "/public/**").permitAll()
+                .requestMatchers("/payment/webhook/**").permitAll()
                 // Protected endpoints
                 .anyRequest().authenticated()
             )
