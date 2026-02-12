@@ -25,13 +25,14 @@ public class CreditService {
     private final AuthService authService;
 
     /**
-     * Calcula créditos estimados baseado na duração do áudio
-     * Regra: 1 crédito por 60 segundos
+     * Calcula créditos baseado na duração exata do áudio.
+     * Regra: 1 crédito a cada 60 segundos, com 1 casa decimal.
+     * Ex: 90s = 1.5 créditos, 30s = 0.5, 104s = 1.8
+     * Mínimo: 0.1 crédito
      */
     public double calculateCreditsForDuration(double durationInSeconds) {
-        double estimatedCredits = durationInSeconds / 60.0;
-        // Arredondar para 2 casas decimais
-        return Math.round(estimatedCredits * 100.0) / 100.0;
+        double credits = Math.round(durationInSeconds / 60.0 * 10.0) / 10.0;
+        return Math.max(credits, 0.1);
     }
 
     /**

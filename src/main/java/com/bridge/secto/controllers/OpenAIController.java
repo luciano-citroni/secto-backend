@@ -4,10 +4,8 @@ import java.util.UUID;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -109,32 +107,36 @@ public class OpenAIController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/calculate-credits")
+    @PostMapping(value = "/calculate-credits", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "Calcular créditos estimados para análise", 
-        description = "Calcula a estimativa de créditos necessários baseado na duração do áudio. Regra: 1 crédito por 60 segundos.",
+        summary = "Calcular créditos exatos para análise", 
+        description = "Recebe o arquivo de áudio e calcula os créditos necessários baseado na duração exata. Regra: 1 crédito a cada 60 segundos (arredondado para cima, mínimo 1).",
         responses = {
             @ApiResponse(responseCode = "200", description = "Cálculo realizado com sucesso", 
                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = CreditEstimationResponseDto.class))),
-            @ApiResponse(responseCode = "400", description = "Duração inválida")
+            @ApiResponse(responseCode = "400", description = "Arquivo inválido ou duração não detectável")
         }
     )
     public ResponseEntity<CreditEstimationResponseDto> calculateCredits(
-            @Parameter(description = "Duração do áudio em segundos", required = true)
-            @RequestParam("duration") Double duration) {
+            @Parameter(description = "Arquivo de áudio para calcular a duração exata", required = true)
+            @RequestPart("file") MultipartFile file) {
         
-        if (duration == null || duration <= 0) {
-            throw new BusinessRuleException("Duration must be greater than 0");
+        if (file == null || file.isEmpty()) {
+            throw new BusinessRuleException("Arquivo de áudio é obrigatório");
         }
 
-        // Usar o serviço de créditos para cálculo
-        double estimatedCredits = creditService.calculateCreditsForDuration(duration);
+        try {
+            double durationInSeconds = audioMetadataService.getAudioDurationInSeconds(file);
+            double estimatedCredits = creditService.calculateCreditsForDuration(durationInSeconds);
 
-        CreditEstimationResponseDto response = new CreditEstimationResponseDto();
-        response.setDurationInSeconds(duration);
-        response.setEstimatedCredits(estimatedCredits);
-        
-        return ResponseEntity.ok(response);
+            CreditEstimationResponseDto response = new CreditEstimationResponseDto();
+            response.setDurationInSeconds(durationInSeconds);
+            response.setEstimatedCredits(estimatedCredits);
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            throw new BusinessRuleException("Não foi possível determinar a duração do áudio: " + e.getMessage());
+        }
     }
 
 
