@@ -44,7 +44,7 @@ public class OpenAIService {
     private final AuthService authService;
     private final ObjectMapper objectMapper;
 
-    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, UUID clientId, String audioFilename, String audioUrl, UUID scriptId) {
+    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, UUID clientId, String audioFilename, String audioUrl, UUID scriptId, Double creditsUsed, String executedBy) {
 
         String scriptText = scriptItems.stream()
                 .map(item -> String.format("Question: %s\nAnswer: %s", item.getQuestion(), item.getAnswer()))
@@ -98,6 +98,8 @@ public class OpenAIService {
                 result.setAiOutputJson(objectMapper.writeValueAsString(response));
                 result.setApproved(approved);
                 result.setCompany(company);
+                result.setCreditsUsed(creditsUsed);
+                result.setExecutedBy(executedBy);
 
                 if (scriptId != null) {
                     scriptRepository.findById(scriptId).ifPresent(result::setScript);

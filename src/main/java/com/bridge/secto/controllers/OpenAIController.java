@@ -15,6 +15,7 @@ import com.bridge.secto.dtos.CreditEstimationResponseDto;
 import com.bridge.secto.dtos.OpenAiAnalysisResponseDTO;
 import com.bridge.secto.exceptions.BusinessRuleException;
 import com.bridge.secto.services.AudioMetadataService;
+import com.bridge.secto.services.AuthService;
 import com.bridge.secto.services.CreditService;
 import com.bridge.secto.services.OpenAIService;
 import com.bridge.secto.services.S3StorageService;
@@ -39,6 +40,7 @@ public class OpenAIController {
     private final S3StorageService s3StorageService;
     private final CreditService creditService;
     private final AudioMetadataService audioMetadataService;
+    private final AuthService authService;
 
     @PostMapping(value = "/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
@@ -90,7 +92,9 @@ public class OpenAIController {
             request.getClientId(),
             audioFilename,
             audioUrl,
-            request.getScriptId()
+            request.getScriptId(),
+            audioDurationInSeconds != null ? creditService.calculateCreditsForDuration(audioDurationInSeconds) : null,
+            authService.getCurrentUser().map(AuthService.UserInfo::getName).orElse(null)
         );
 
         // Descontar créditos após análise bem-sucedida

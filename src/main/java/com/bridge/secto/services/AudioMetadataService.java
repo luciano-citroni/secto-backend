@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +29,7 @@ public class AudioMetadataService {
                 suffix = originalFilename.substring(originalFilename.lastIndexOf('.'));
             }
             tempFile = Files.createTempFile("audio_", suffix).toFile();
-            audioFile.transferTo(tempFile);
+            Files.copy(audioFile.getInputStream(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
             // Executar FFprobe para obter duração exata
             ProcessBuilder pb = new ProcessBuilder(

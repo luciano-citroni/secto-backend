@@ -15,10 +15,13 @@ public class AnalysisResultResponseDto {
     private String clientSurname;
     private String clientCpf;
     private String audioFilename;
+    private String audioUrl;
     private String transcription;
     private JsonNode script;
     private JsonNode aiOutput;
     private Boolean approved;
+    private Double creditsUsed;
+    private String executedBy;
     private Instant createdAt;
     private UUID serviceTypeId;
     private String serviceTypeName;

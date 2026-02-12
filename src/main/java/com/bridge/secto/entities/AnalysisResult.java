@@ -44,6 +44,12 @@ public class AnalysisResult extends BaseEntity {
 
     private Boolean approved;
 
+    @Column(name = "credits_used")
+    private Double creditsUsed;
+
+    @Column(name = "executed_by")
+    private String executedBy;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;

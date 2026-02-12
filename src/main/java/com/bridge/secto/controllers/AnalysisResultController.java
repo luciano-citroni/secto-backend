@@ -72,8 +72,11 @@ public class AnalysisResultController {
         AnalysisResultResponseDto dto = new AnalysisResultResponseDto();
         dto.setId(entity.getId());
         dto.setAudioFilename(entity.getAudioFilename());
+        dto.setAudioUrl(entity.getAudioUrl());
         dto.setTranscription(entity.getTranscription());
         dto.setApproved(entity.getApproved());
+        dto.setCreditsUsed(entity.getCreditsUsed());
+        dto.setExecutedBy(entity.getExecutedBy());
         dto.setCreatedAt(entity.getCreatedAt());
 
         // Informações do cliente se estiver associado
