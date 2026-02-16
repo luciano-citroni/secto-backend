@@ -20,16 +20,27 @@ import com.bridge.secto.exceptions.ResourceNotFoundException;
 import com.bridge.secto.services.AuthService;
 import com.bridge.secto.services.StripeService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/payment")
 @RequiredArgsConstructor
+@Tag(name = "Pagamentos", description = "Endpoints para gerenciamento de pagamentos e checkout via Stripe")
 public class StripeController {
 
     private final StripeService stripeService;
     private final AuthService authService;
 
+    @Operation(summary = "Listar produtos disponíveis", description = "Retorna todos os produtos ativos do Stripe com seus respectivos preços e quantidade de créditos")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de produtos retornada com sucesso"),
+        @ApiResponse(responseCode = "500", description = "Erro ao buscar produtos no Stripe")
+    })
     @GetMapping("/products")
     public ResponseEntity<List<StripeProductDto>> listProducts() {
         try {
@@ -40,8 +51,15 @@ public class StripeController {
         }
     }
 
+    @Operation(summary = "Criar sessão de checkout", description = "Cria uma sessão de checkout no Stripe para compra de créditos. Retorna a URL de redirecionamento para o pagamento")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Sessão de checkout criada com sucesso, retorna URL de redirecionamento"),
+        @ApiResponse(responseCode = "404", description = "Empresa não encontrada para o usuário autenticado"),
+        @ApiResponse(responseCode = "400", description = "Erro ao criar sessão de checkout")
+    })
     @PostMapping("/checkout")
-    public ResponseEntity<Map<String, String>> createCheckoutSession(@RequestBody CheckoutRequestDto request) {
+    public ResponseEntity<Map<String, String>> createCheckoutSession(
+            @RequestBody CheckoutRequestDto request) {
         Company company = authService.getCurrentCompany()
             .orElseThrow(() -> new ResourceNotFoundException("Company not found for current user"));
         
@@ -53,8 +71,13 @@ public class StripeController {
         }
     }
 
+    @Operation(summary = "Verificar pagamento", description = "Verifica o status de um pagamento pelo ID da sessão Stripe e processa os créditos se confirmado")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Verificação realizada. Campo 'success' indica se os créditos foram adicionados")
+    })
     @GetMapping("/verify-payment/{sessionId}")
-    public ResponseEntity<Map<String, Object>> verifyPayment(@PathVariable String sessionId) {
+    public ResponseEntity<Map<String, Object>> verifyPayment(
+            @Parameter(description = "ID da sessão Stripe retornado após o checkout") @PathVariable String sessionId) {
         try {
             boolean credited = stripeService.verifyAndProcessPayment(sessionId);
             return ResponseEntity.ok(Map.of("success", credited));
@@ -63,8 +86,15 @@ public class StripeController {
         }
     }
 
+    @Operation(summary = "Webhook Stripe (snapshot)", description = "Endpoint para receber webhooks do Stripe no modo snapshot. Processa eventos de checkout completado e pagamentos de assinatura")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Webhook processado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Erro ao processar webhook")
+    })
     @PostMapping("/webhook/stripe/snapshot")
-    public ResponseEntity<String> handleSnapshotWebhook(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader) {
+    public ResponseEntity<String> handleSnapshotWebhook(
+            @RequestBody String payload,
+            @Parameter(description = "Assinatura do Stripe para validação do webhook") @RequestHeader("Stripe-Signature") String sigHeader) {
         try {
             stripeService.handleWebhook(payload, sigHeader, "snapshot");
             return ResponseEntity.ok("Received");
@@ -73,8 +103,15 @@ public class StripeController {
         }
     }
 
+    @Operation(summary = "Webhook Stripe (minimal)", description = "Endpoint para receber webhooks do Stripe no modo minimal. Processa eventos de checkout completado e pagamentos de assinatura")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Webhook processado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Erro ao processar webhook")
+    })
     @PostMapping("/webhook/stripe/minimal")
-    public ResponseEntity<String> handleMinimalWebhook(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader) {
+    public ResponseEntity<String> handleMinimalWebhook(
+            @RequestBody String payload,
+            @Parameter(description = "Assinatura do Stripe para validação do webhook") @RequestHeader("Stripe-Signature") String sigHeader) {
         try {
             stripeService.handleWebhook(payload, sigHeader, "minimal");
             return ResponseEntity.ok("Received");

@@ -21,15 +21,27 @@ import com.bridge.secto.exceptions.BusinessRuleException;
 import com.bridge.secto.exceptions.ResourceNotFoundException;
 import com.bridge.secto.repositories.CompanyRepository;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/companyCredits")
 @RequiredArgsConstructor
+@Tag(name = "Créditos da Empresa", description = "Endpoints para gerenciamento de contas de crédito das empresas")
 public class CompanyCreditController {
 
     private final CompanyRepository companyRepository;
 
+    @Operation(summary = "Criar conta de crédito", description = "Cria uma conta de crédito para uma empresa. Cada empresa pode ter apenas uma conta de crédito")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Conta de crédito criada com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Empresa não encontrada"),
+        @ApiResponse(responseCode = "400", description = "Empresa já possui conta de crédito")
+    })
     @PostMapping("/")
     @ResponseBody
     @Transactional
@@ -52,10 +64,16 @@ public class CompanyCreditController {
         return ResponseEntity.ok(company.getCompanyCredit());
     }
 
+    @Operation(summary = "Consultar saldo de créditos", description = "Retorna o saldo de créditos da empresa. Cria automaticamente uma conta com saldo zero se não existir")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Saldo retornado com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Empresa não encontrada")
+    })
     @GetMapping("/byCompanyId/{id}")
     @ResponseBody
     @Transactional
-    public ResponseEntity<CompanyCreditResponseDto> getCompanyCreditByCompanyId(@PathVariable("id") UUID companyId) {
+    public ResponseEntity<CompanyCreditResponseDto> getCompanyCreditByCompanyId(
+            @Parameter(description = "ID da empresa") @PathVariable("id") UUID companyId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found with id: " + companyId));
         

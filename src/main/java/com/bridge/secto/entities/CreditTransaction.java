@@ -26,4 +26,10 @@ public class CreditTransaction extends BaseEntity {
 
     @Column(name = "stripe_session_id")
     private String stripeSessionId;
+
+    @Column(name = "purchased_by")
+    private String purchasedBy;
+
+    @Column(name = "purchased_by_name")
+    private String purchasedByName;
 }

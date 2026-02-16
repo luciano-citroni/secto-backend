@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.dtos.ClientRequestDto;
@@ -25,13 +26,17 @@ import com.bridge.secto.repositories.CompanyRepository;
 import com.bridge.secto.services.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/clients")
 @RequiredArgsConstructor
+@Tag(name = "Clientes", description = "Endpoints para gerenciamento de clientes da empresa")
 public class ClientController {
 
     private final ClientRepository clientRepository;
@@ -48,6 +53,30 @@ public class ClientController {
             .map(this::mapToResponseDto)
             .collect(Collectors.toList());
         
+        return ResponseEntity.ok(dtos);
+    }
+
+    @Operation(summary = "Buscar clientes por CPF ou nome", description = "Pesquisa clientes da empresa autenticada por CPF ou nome. Remove automaticamente formatação de CPF (pontos e traços). A busca é case-insensitive e busca por correspondência parcial no CPF, nome ou sobrenome.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de clientes encontrados (pode ser vazia)")
+    })
+    @GetMapping("/search")
+    public ResponseEntity<List<ClientResponseDto>> searchClients(
+            @Parameter(description = "Termo de busca: CPF (com ou sem formatação) ou nome do cliente", example = "123.456.789-01 ou João")
+            @RequestParam("q") String query) {
+        UUID userCompanyId = authService.getCurrentCompanyId();
+
+        // Remove formatting characters (dots and dashes) for CPF-like queries
+        String cleanQuery = query.replaceAll("[.\\-/]", "").trim();
+
+        if (cleanQuery.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<ClientResponseDto> dtos = clientRepository.searchByCompanyIdAndQuery(userCompanyId, cleanQuery).stream()
+            .map(this::mapToResponseDto)
+            .collect(Collectors.toList());
+
         return ResponseEntity.ok(dtos);
     }
 

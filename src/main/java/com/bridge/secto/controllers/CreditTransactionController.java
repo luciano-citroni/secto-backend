@@ -19,37 +19,51 @@ import com.bridge.secto.entities.CreditTransaction;
 import com.bridge.secto.repositories.CompanyCreditRepository;
 import com.bridge.secto.repositories.CreditTransactionRepository;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 
 @RestController
 @RequestMapping("/creditTransactions")
 @RequiredArgsConstructor
+@Tag(name = "Transações de Crédito", description = "Endpoints para consulta e criação de transações de crédito")
 public class CreditTransactionController {
 
     private final CompanyCreditRepository companyCreditRepository;
     private final CreditTransactionRepository creditTransactionRepository;
 
+    @Operation(summary = "Listar transações de crédito", description = "Retorna todas as transações de crédito associadas a uma conta de crédito, incluindo informações do usuário que realizou a compra")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de transações retornada com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Conta de crédito não encontrada")
+    })
     @GetMapping("/byCompanyCredit/{id}")
-    public ResponseEntity<List<CreditTransactionResponseDTO>> getTransactionsByCompanyCreditId(@PathVariable("id") UUID companyCreditId) {
+    public ResponseEntity<List<CreditTransactionResponseDTO>> getTransactionsByCompanyCreditId(
+            @Parameter(description = "ID da conta de crédito da empresa") @PathVariable("id") UUID companyCreditId) {
         CompanyCredit companyCredit = this.companyCreditRepository.findById(companyCreditId)
             .orElseThrow(() -> new RuntimeException("CompanyCredit not found with id: " + companyCreditId));
 
         List<CreditTransactionResponseDTO> dtos = companyCredit.getCreditTransactions().stream()
-            .map(transaction -> {
-                CreditTransactionResponseDTO dto = new CreditTransactionResponseDTO();
-                dto.setId(transaction.getId());
-                dto.setAmount(transaction.getAmount());
-                return dto;
-            })
+            .map(this::mapToResponseDto)
             .collect(Collectors.toList());
             
         return ResponseEntity.ok(dtos);
     }
 
+    @Operation(summary = "Criar transação de crédito manual", description = "Adiciona créditos manualmente a uma conta de crédito (ajuste administrativo)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Transação criada com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Conta de crédito não encontrada")
+    })
     @PostMapping("/byCompanyCredit/{id}")
     @Transactional
-    public ResponseEntity<CreditTransactionResponseDTO> createTransaction(@PathVariable("id") UUID companyCreditId, @RequestBody CreditTransaction request) {
+    public ResponseEntity<CreditTransactionResponseDTO> createTransaction(
+            @Parameter(description = "ID da conta de crédito da empresa") @PathVariable("id") UUID companyCreditId,
+            @RequestBody CreditTransaction request) {
         CompanyCredit companyCredit = this.companyCreditRepository.findById(companyCreditId)
             .orElseThrow(() -> new RuntimeException("CompanyCredit not found with id: " + companyCreditId));
         
@@ -63,11 +77,18 @@ public class CreditTransactionController {
         
         companyCreditRepository.save(companyCredit);
 
+        return ResponseEntity.ok(mapToResponseDto(creditTransaction));
+    }
+
+    private CreditTransactionResponseDTO mapToResponseDto(CreditTransaction transaction) {
         CreditTransactionResponseDTO dto = new CreditTransactionResponseDTO();
-        dto.setId(creditTransaction.getId());
-        dto.setAmount(creditTransaction.getAmount());
-        
-        return ResponseEntity.ok(dto);
+        dto.setId(transaction.getId());
+        dto.setAmount(transaction.getAmount());
+        dto.setStripeSessionId(transaction.getStripeSessionId());
+        dto.setPurchasedBy(transaction.getPurchasedBy());
+        dto.setPurchasedByName(transaction.getPurchasedByName());
+        dto.setCreatedAt(transaction.getCreatedAt());
+        return dto;
     }
     
 }

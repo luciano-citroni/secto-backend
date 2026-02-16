@@ -58,6 +58,7 @@ public class StripeService {
     private final CompanyCreditRepository companyCreditRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final CompanyRepository companyRepository;
+    private final AuthService authService;
 
     @PostConstruct
     public void init() {
@@ -404,6 +405,16 @@ public class StripeService {
         transaction.setCompanyCredit(credit);
         transaction.setAmount(amount);
         transaction.setStripeSessionId(stripeSessionId);
+
+        // Capture the user who made the purchase
+        try {
+            authService.getCurrentUser().ifPresent(user -> {
+                transaction.setPurchasedBy(user.getKeycloakId());
+                transaction.setPurchasedByName(user.getName() != null ? user.getName() : user.getUsername());
+            });
+        } catch (Exception e) {
+            log.debug("Could not resolve current user for transaction (webhook context): {}", e.getMessage());
+        }
 
         try {
             creditTransactionRepository.save(transaction);
