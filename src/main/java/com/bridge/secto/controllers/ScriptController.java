@@ -56,6 +56,7 @@ public class ScriptController {
         dto.setId(item.getId());
         dto.setQuestion(item.getQuestion());
         dto.setAnswer(item.getAnswer());
+        dto.setLinkedClientField(item.getLinkedClientField());
         return dto;
     }
 

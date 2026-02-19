@@ -16,4 +16,8 @@ public class ScriptItemInputDto {
 
     @Schema(description = "A resposta esperada para a pergunta", example = "João da Silva")
     private String answer;
+
+    @Schema(description = "Campo do cliente vinculado a esta pergunta", example = "fullName", 
+            allowableValues = {"fullName", "cpf", "rg", "birthDate", "address", "phone", "email", "sexo"})
+    private String linkedClientField;
 }

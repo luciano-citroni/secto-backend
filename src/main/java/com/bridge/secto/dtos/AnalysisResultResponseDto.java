@@ -12,7 +12,6 @@ public class AnalysisResultResponseDto {
     private UUID id;
     private UUID clientId;
     private String clientName;
-    private String clientSurname;
     private String clientCpf;
     private String audioFilename;
     private String audioUrl;

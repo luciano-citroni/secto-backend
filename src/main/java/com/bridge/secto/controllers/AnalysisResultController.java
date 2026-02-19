@@ -82,8 +82,7 @@ public class AnalysisResultController {
         // Informações do cliente se estiver associado
         if (entity.getClient() != null) {
             dto.setClientId(entity.getClient().getId());
-            dto.setClientName(entity.getClient().getName());
-            dto.setClientSurname(entity.getClient().getSurname());
+            dto.setClientName(entity.getClient().getFullName());
             dto.setClientCpf(entity.getClient().getCpf());
         }
 

@@ -1,0 +1,1 @@
+ALTER TABLE secto.client ADD COLUMN sexo VARCHAR(20);

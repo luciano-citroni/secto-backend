@@ -22,7 +22,6 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
 
     @Query("SELECT c FROM Client c WHERE c.company.id = :companyId AND ("
          + "LOWER(c.cpf) LIKE LOWER(CONCAT('%', :query, '%')) OR "
-         + "LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR "
-         + "LOWER(c.surname) LIKE LOWER(CONCAT('%', :query, '%')))")
+         + "LOWER(c.fullName) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<Client> searchByCompanyIdAndQuery(@Param("companyId") UUID companyId, @Param("query") String query);
 }

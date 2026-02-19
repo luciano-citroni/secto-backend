@@ -11,15 +11,10 @@ import lombok.Data;
 @Schema(description = "Dados para criação/atualização de cliente")
 public class ClientRequestDto {
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must have at most 100 characters")
-    @Schema(description = "Client name", example = "John")
-    private String name;
-
-    @NotBlank(message = "Surname is required")
-    @Size(max = 100, message = "Surname must have at most 100 characters")
-    @Schema(description = "Client surname", example = "Smith")
-    private String surname;
+    @NotBlank(message = "Full name is required")
+    @Size(max = 200, message = "Full name must have at most 200 characters")
+    @Schema(description = "Client full name", example = "John Smith")
+    private String fullName;
 
     @Schema(description = "Client birth date", example = "1990-01-01")
     private LocalDate birthDate;
@@ -36,6 +31,17 @@ public class ClientRequestDto {
     @Schema(description = "Client full address", example = "123 Main St, Downtown")
     private String address;
 
+    @Size(max = 20, message = "Phone must have at most 20 characters")
+    @Schema(description = "Client phone number", example = "11999998888")
+    private String phone;
+
+    @Schema(description = "Client email", example = "john@example.com")
+    @jakarta.validation.constraints.Email(message = "Invalid email format")
+    private String email;
+
     @Schema(description = "Status ativo do cliente", example = "true")
     private Boolean status;
+
+    @Schema(description = "Gender", example = "MALE", allowableValues = {"MALE", "FEMALE", "OTHER"})
+    private String gender;
 }

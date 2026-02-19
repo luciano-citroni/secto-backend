@@ -8,12 +8,14 @@ import lombok.Data;
 @Data
 public class ClientResponseDto {
     private UUID id;
-    private String name;
-    private String surname;
+    private String fullName;
     private LocalDate birthDate;
     private String cpf;
     private String rg;
     private String address;
+    private String phone;
+    private String email;
     private Boolean status;
+    private String gender;
     private UUID companyId;
 }

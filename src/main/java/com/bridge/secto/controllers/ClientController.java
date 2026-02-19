@@ -19,6 +19,7 @@ import com.bridge.secto.dtos.ClientRequestDto;
 import com.bridge.secto.dtos.ClientResponseDto;
 import com.bridge.secto.entities.Client;
 import com.bridge.secto.entities.Company;
+import com.bridge.secto.enums.Gender;
 import com.bridge.secto.exceptions.ResourceNotFoundException;
 import com.bridge.secto.exceptions.UnauthorizedActionException;
 import com.bridge.secto.repositories.ClientRepository;
@@ -114,13 +115,17 @@ public class ClientController {
             .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
 
         Client client = new Client();
-        client.setName(request.getName());
-        client.setSurname(request.getSurname());
+        client.setFullName(request.getFullName());
         client.setBirthDate(request.getBirthDate());
         client.setCpf(request.getCpf());
         client.setRg(request.getRg());
         client.setAddress(request.getAddress());
+        client.setPhone(request.getPhone());
+        client.setEmail(request.getEmail());
         client.setStatus(request.getStatus() != null ? request.getStatus() : true);
+        if (request.getGender() != null && !request.getGender().isEmpty()) {
+            client.setGender(Gender.valueOf(request.getGender().toUpperCase()));
+        }
         client.setCompany(company);
 
         client = clientRepository.save(client);
@@ -152,14 +157,18 @@ public class ClientController {
                 });
         }
 
-        client.setName(request.getName());
-        client.setSurname(request.getSurname());
+        client.setFullName(request.getFullName());
         client.setBirthDate(request.getBirthDate());
         client.setCpf(request.getCpf());
         client.setRg(request.getRg());
         client.setAddress(request.getAddress());
+        client.setPhone(request.getPhone());
+        client.setEmail(request.getEmail());
         if (request.getStatus() != null) {
             client.setStatus(request.getStatus());
+        }
+        if (request.getGender() != null && !request.getGender().isEmpty()) {
+            client.setGender(Gender.valueOf(request.getGender().toUpperCase()));
         }
 
         client = clientRepository.save(client);
@@ -190,13 +199,15 @@ public class ClientController {
     private ClientResponseDto mapToResponseDto(Client client) {
         ClientResponseDto dto = new ClientResponseDto();
         dto.setId(client.getId());
-        dto.setName(client.getName());
-        dto.setSurname(client.getSurname());
+        dto.setFullName(client.getFullName());
         dto.setBirthDate(client.getBirthDate());
         dto.setCpf(client.getCpf());
         dto.setRg(client.getRg());
         dto.setAddress(client.getAddress());
+        dto.setPhone(client.getPhone());
+        dto.setEmail(client.getEmail());
         dto.setStatus(client.getStatus());
+        dto.setGender(client.getGender() != null ? client.getGender().name() : null);
         dto.setCompanyId(client.getCompany().getId());
         return dto;
     }

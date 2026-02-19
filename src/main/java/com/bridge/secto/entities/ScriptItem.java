@@ -19,6 +19,9 @@ public class ScriptItem extends BaseEntity {
     
     @Column()
     private String answer;
+
+    @Column(name = "linked_client_field")
+    private String linkedClientField;
     
     @ManyToOne
     @JoinColumn(name = "script_id", nullable = false)
