@@ -27,11 +27,12 @@ public class CreditService {
     /**
      * Calcula créditos baseado na duração exata do áudio.
      * Regra: 1 crédito a cada 60 segundos, com 1 casa decimal.
+     * Sempre arredonda a segunda casa decimal para cima.
      * Ex: 90s = 1.5 créditos, 30s = 0.5, 104s = 1.8
      * Mínimo: 0.1 crédito
      */
     public double calculateCreditsForDuration(double durationInSeconds) {
-        double credits = Math.round(durationInSeconds / 60.0 * 10.0) / 10.0;
+        double credits = Math.ceil(durationInSeconds / 60.0 * 10.0) / 10.0;
         return Math.max(credits, 0.1);
     }
 
