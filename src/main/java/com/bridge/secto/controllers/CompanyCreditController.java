@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/companyCredits")
 @RequiredArgsConstructor
 @Tag(name = "Créditos da Empresa", description = "Endpoints para gerenciamento de contas de crédito das empresas")
+@SecurityRequirement(name = "keycloak")
 public class CompanyCreditController {
 
     private final CompanyRepository companyRepository;

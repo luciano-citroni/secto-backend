@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +31,8 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/creditTransactions")
 @RequiredArgsConstructor
-@Tag(name = "Transações de Crédito", description = "Endpoints para consulta e criação de transações de crédito")
+@Tag(name = "Transações de Crédito", description = "Endpoints para consulta e criação de transações de crédito. Inclui informações de quem realizou cada compra.")
+@SecurityRequirement(name = "keycloak")
 public class CreditTransactionController {
 
     private final CompanyCreditRepository companyCreditRepository;

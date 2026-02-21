@@ -62,6 +62,17 @@ public class CreditService {
         CreditTransaction transaction = new CreditTransaction();
         transaction.setAmount(debitAmount.negate());
         transaction.setCompanyCredit(companyCredit);
+
+        // Registrar o usuário responsável pela transação
+        try {
+            authService.getCurrentUser().ifPresent(user -> {
+                transaction.setPurchasedBy(user.getKeycloakId());
+                transaction.setPurchasedByName(user.getName() != null ? user.getName() : user.getUsername());
+            });
+        } catch (Exception e) {
+            log.debug("Não foi possível identificar o usuário da transação: {}", e.getMessage());
+        }
+
         creditTransactionRepository.save(transaction);
 
         // Atualizar saldo da empresa

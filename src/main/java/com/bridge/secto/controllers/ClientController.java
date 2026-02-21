@@ -30,6 +30,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,15 +38,16 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/clients")
 @RequiredArgsConstructor
-@Tag(name = "Clientes", description = "Endpoints para gerenciamento de clientes da empresa")
+@Tag(name = "Clientes", description = "Endpoints para gerenciamento de clientes da empresa. Inclui busca por CPF ou nome.")
+@SecurityRequirement(name = "keycloak")
 public class ClientController {
 
     private final ClientRepository clientRepository;
     private final CompanyRepository companyRepository;
     private final AuthService authService;
 
-    @Operation(summary = "Get Clients by Company")
-    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @Operation(summary = "Listar clientes da empresa", description = "Retorna todos os clientes ativos da empresa autenticada")
+    @ApiResponse(responseCode = "200", description = "Lista de clientes retornada com sucesso")
     @GetMapping
     public ResponseEntity<List<ClientResponseDto>> getClients() {
         UUID userCompanyId = authService.getCurrentCompanyId();
@@ -81,8 +83,11 @@ public class ClientController {
         return ResponseEntity.ok(dtos);
     }
 
-    @Operation(summary = "Get Client by ID")
-    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @Operation(summary = "Buscar cliente por ID", description = "Retorna os dados de um cliente específico da empresa autenticada")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cliente encontrado"),
+        @ApiResponse(responseCode = "404", description = "Cliente não encontrado")
+    })
     @GetMapping("/{id}")
     public ResponseEntity<ClientResponseDto> getClientById(@PathVariable UUID id) {
         UUID userCompanyId = authService.getCurrentCompanyId();
@@ -97,8 +102,11 @@ public class ClientController {
         return ResponseEntity.ok(mapToResponseDto(client));
     }
 
-    @Operation(summary = "Create Client")
-    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @Operation(summary = "Criar cliente", description = "Cria um novo cliente associado à empresa autenticada. O CPF deve ser único.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cliente criado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "CPF já existe ou dados inválidos")
+    })
     @PostMapping
     public ResponseEntity<ClientResponseDto> createClient(@Valid @RequestBody ClientRequestDto request) {
         UUID userCompanyId = authService.getCurrentCompanyId();
@@ -133,8 +141,12 @@ public class ClientController {
         return ResponseEntity.ok(mapToResponseDto(client));
     }
 
-    @Operation(summary = "Update Client")
-    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @Operation(summary = "Atualizar cliente", description = "Atualiza os dados de um cliente existente da empresa autenticada")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cliente atualizado com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Cliente não encontrado"),
+        @ApiResponse(responseCode = "400", description = "CPF já existe para outro cliente")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<ClientResponseDto> updateClient(@PathVariable UUID id, 
                                                          @Valid @RequestBody ClientRequestDto request) {
@@ -176,8 +188,11 @@ public class ClientController {
         return ResponseEntity.ok(mapToResponseDto(client));
     }
 
-    @Operation(summary = "Delete Client (Soft Delete)")
-    @ApiResponse(responseCode = "200", description = "Successful operation")
+    @Operation(summary = "Desativar cliente (Soft Delete)", description = "Desativa um cliente definindo status=false. O cliente não é removido do banco.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cliente desativado com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Cliente não encontrado")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteClient(@PathVariable UUID id) {
         UUID userCompanyId = authService.getCurrentCompanyId();

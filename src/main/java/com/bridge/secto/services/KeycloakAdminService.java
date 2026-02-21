@@ -353,6 +353,178 @@ public class KeycloakAdminService {
     }
 
     /**
+     * Desativar um usuário no Keycloak (enabled = false)
+     */
+    public void disableUser(String userId) {
+        try {
+            String adminToken = getAdminToken();
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("enabled", false);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+            String updateUserUrl = String.format("%s/admin/realms/%s/users/%s",
+                    getNormalizedBaseUrl(), realm, userId);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    updateUserUrl, org.springframework.http.HttpMethod.PUT, request, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Falha ao desativar usuário: " + response.getStatusCode());
+            }
+
+            log.info("Usuário desativado com sucesso: {}", userId);
+        } catch (Exception e) {
+            log.error("Erro ao desativar usuário no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao desativar usuário: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Atualizar dados de um usuário no Keycloak (firstName, lastName, email)
+     */
+    public void updateUser(String userId, String firstName, String lastName, String email) {
+        try {
+            String adminToken = getAdminToken();
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("firstName", firstName);
+            payload.put("lastName", lastName);
+            payload.put("email", email);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+            String updateUserUrl = String.format("%s/admin/realms/%s/users/%s",
+                    getNormalizedBaseUrl(), realm, userId);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    updateUserUrl, org.springframework.http.HttpMethod.PUT, request, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Falha ao atualizar usuário: " + response.getStatusCode());
+            }
+
+            log.info("Usuário atualizado com sucesso: {}", userId);
+        } catch (Exception e) {
+            log.error("Erro ao atualizar usuário no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar usuário: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Resetar a senha de um usuário no Keycloak
+     */
+    public void resetUserPassword(String userId, String newPassword, boolean temporary) {
+        try {
+            String adminToken = getAdminToken();
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "password");
+            payload.put("value", newPassword);
+            payload.put("temporary", temporary);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+            String resetPasswordUrl = String.format("%s/admin/realms/%s/users/%s/reset-password",
+                    getNormalizedBaseUrl(), realm, userId);
+
+            restTemplate.exchange(
+                    resetPasswordUrl, org.springframework.http.HttpMethod.PUT, request, String.class);
+
+            log.info("Senha resetada com sucesso para o usuário: {}", userId);
+        } catch (Exception e) {
+            log.error("Erro ao resetar senha do usuário no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao resetar senha: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Validar senha atual de um usuário tentando obter token
+     */
+    public boolean validateUserPassword(String username, String currentPassword) {
+        try {
+            String tokenUrl = getNormalizedBaseUrl() + "/realms/" + realm + "/protocol/openid-connect/token";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+            map.add("client_id", "secto-client");
+            map.add("username", username);
+            map.add("password", currentPassword);
+            map.add("grant_type", "password");
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            log.debug("Validação de senha falhou para o usuário: {}", username);
+            return false;
+        }
+    }
+
+    /**
+     * Verificar se um usuário pertence a uma empresa específica
+     */
+    @SuppressWarnings("unchecked")
+    public boolean isUserInCompany(String userId, UUID companyId) {
+        try {
+            String adminToken = getAdminToken();
+
+            String getUserUrl = String.format("%s/admin/realms/%s/users/%s",
+                    getNormalizedBaseUrl(), realm, userId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    getUserUrl, org.springframework.http.HttpMethod.GET, request, Map.class);
+
+            if (response.getBody() == null) {
+                return false;
+            }
+
+            Map<String, Object> user = response.getBody();
+            Map<String, Object> attributes = (Map<String, Object>) user.get("attributes");
+            if (attributes == null || !attributes.containsKey("company_id")) {
+                return false;
+            }
+
+            Object companyIdAttr = attributes.get("company_id");
+            String userCompanyId = null;
+
+            if (companyIdAttr instanceof List) {
+                List<String> companyIdList = (List<String>) companyIdAttr;
+                if (!companyIdList.isEmpty()) {
+                    userCompanyId = companyIdList.get(0);
+                }
+            } else if (companyIdAttr instanceof String) {
+                userCompanyId = (String) companyIdAttr;
+            }
+
+            return companyId.toString().equals(userCompanyId);
+        } catch (Exception e) {
+            log.error("Erro ao verificar se usuário pertence à empresa: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
      * Configurar protocol mappers para incluir clientId no token
      */
     private void configureClientProtocolMappers(String internalClientId, String clientId, String adminToken) {
