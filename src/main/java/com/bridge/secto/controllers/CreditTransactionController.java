@@ -1,5 +1,6 @@
 package com.bridge.secto.controllers;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -82,6 +83,26 @@ public class CreditTransactionController {
         return ResponseEntity.ok(mapToResponseDto(creditTransaction));
     }
 
+    @Operation(summary = "Listar lotes de créditos", description = "Retorna todos os lotes de créditos (transações positivas) com informações de validade e expiração, ordenados por data de expiração")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de lotes retornada com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Conta de crédito não encontrada")
+    })
+    @GetMapping("/lots/byCompanyCredit/{id}")
+    public ResponseEntity<List<CreditTransactionResponseDTO>> getLotsByCompanyCreditId(
+            @Parameter(description = "ID da conta de crédito da empresa") @PathVariable("id") UUID companyCreditId) {
+        this.companyCreditRepository.findById(companyCreditId)
+            .orElseThrow(() -> new RuntimeException("CompanyCredit not found with id: " + companyCreditId));
+
+        List<CreditTransactionResponseDTO> dtos = creditTransactionRepository
+            .findByCompanyCreditIdAndAmountGreaterThanOrderByExpiresAtAsc(companyCreditId, BigDecimal.ZERO)
+            .stream()
+            .map(this::mapToResponseDto)
+            .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
+    }
+
     private CreditTransactionResponseDTO mapToResponseDto(CreditTransaction transaction) {
         CreditTransactionResponseDTO dto = new CreditTransactionResponseDTO();
         dto.setId(transaction.getId());
@@ -90,6 +111,10 @@ public class CreditTransactionController {
         dto.setPurchasedBy(transaction.getPurchasedBy());
         dto.setPurchasedByName(transaction.getPurchasedByName());
         dto.setCreatedAt(transaction.getCreatedAt());
+        dto.setExpiresAt(transaction.getExpiresAt());
+        dto.setRemainingAmount(transaction.getRemainingAmount());
+        dto.setSourceType(transaction.getSourceType());
+        dto.setIntervalType(transaction.getIntervalType());
         return dto;
     }
     

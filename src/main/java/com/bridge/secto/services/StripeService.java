@@ -1,6 +1,8 @@
 package com.bridge.secto.services;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.bridge.secto.dtos.StripeProductDto;
+import com.bridge.secto.dtos.SubscriptionInfoDto;
 import com.bridge.secto.entities.Company;
 import com.bridge.secto.entities.CompanyCredit;
 import com.bridge.secto.entities.CreditTransaction;
@@ -24,10 +27,13 @@ import com.stripe.model.Invoice;
 import com.stripe.model.Price;
 import com.stripe.model.Product;
 import com.stripe.model.Subscription;
+import com.stripe.model.SubscriptionCollection;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import com.stripe.param.PriceListParams;
 import com.stripe.param.ProductListParams;
+import com.stripe.param.SubscriptionCancelParams;
+import com.stripe.param.SubscriptionListParams;
 import com.stripe.param.checkout.SessionCreateParams;
 
 import jakarta.annotation.PostConstruct;
@@ -43,16 +49,16 @@ public class StripeService {
     @Value("${stripe.secret.key}")
     private String stripeApiKey;
 
-    @Value("${stripe.webhook.secret:whsec_placeholder}")
+    @Value("${stripe.webhook.secret}")
     private String endpointSecret;
 
-    @Value("${stripe.webhook.secret.minimal:whsec_placeholder}")
+    @Value("${stripe.webhook.secret.minimal:}")
     private String endpointSecretMinimal;
 
-    @Value("${stripe.success-url:http://localhost:3000/creditos?success=true&session_id={CHECKOUT_SESSION_ID}}")
+    @Value("${stripe.success-url}")
     private String successUrl;
 
-    @Value("${stripe.cancel-url:http://localhost:3000/creditos?canceled=true}")
+    @Value("${stripe.cancel-url}")
     private String cancelUrl;
 
     private final CompanyCreditRepository companyCreditRepository;
@@ -63,6 +69,16 @@ public class StripeService {
     @PostConstruct
     public void init() {
         Stripe.apiKey = stripeApiKey;
+
+        if (endpointSecret == null || endpointSecret.isBlank()) {
+            log.warn("STRIPE_WEBHOOK_SECRET não configurado. Webhooks não funcionarão.");
+        }
+        if (successUrl == null || successUrl.isBlank()) {
+            throw new IllegalStateException("stripe.success-url deve ser configurado (env: app.frontend-url)");
+        }
+        if (cancelUrl == null || cancelUrl.isBlank()) {
+            throw new IllegalStateException("stripe.cancel-url deve ser configurado (env: app.frontend-url)");
+        }
     }
 
     /**
@@ -131,6 +147,8 @@ public class StripeService {
     /**
      * Create a Stripe Checkout Session using a Stripe price ID.
      * Uses SUBSCRIPTION mode for recurring prices, PAYMENT mode for one-time.
+     * If the company already has an active subscription and is buying a recurring plan,
+     * the existing subscription is cancelled immediately (credits from old plan keep their original expiration).
      */
     public String createCheckoutSession(String priceId, UUID companyId) throws Exception {
         Price price = Price.retrieve(priceId);
@@ -140,6 +158,21 @@ public class StripeService {
         String creditsStr = product.getMetadata() != null ? product.getMetadata().get("credits") : null;
         if (creditsStr == null) {
             throw new IllegalArgumentException("Product does not have credits metadata");
+        }
+
+        // If buying a recurring plan, cancel existing subscription first
+        if (isRecurring) {
+            try {
+                cancelActiveSubscription(companyId);
+            } catch (Exception e) {
+                log.info("No active subscription to cancel for company {} (or error): {}", companyId, e.getMessage());
+            }
+        }
+
+        // Determine interval for metadata (used by addCredits to calculate expiration)
+        String interval = null;
+        if (price.getRecurring() != null) {
+            interval = price.getRecurring().getInterval();
         }
 
         SessionCreateParams.Mode mode = isRecurring
@@ -157,11 +190,34 @@ public class StripeService {
                 .putMetadata("companyId", companyId.toString())
                 .putMetadata("credits", creditsStr);
 
+        if (interval != null) {
+            builder.putMetadata("interval", interval);
+        }
+
         if (isRecurring) {
-            builder.setSubscriptionData(SessionCreateParams.SubscriptionData.builder()
+            // Capturar nome do usuário que criou a assinatura para registrar nas renovações
+            String purchasedByName = null;
+            try {
+                purchasedByName = authService.getCurrentUser()
+                        .map(user -> user.getName() != null ? user.getName() : user.getUsername())
+                        .orElse(null);
+            } catch (Exception e) {
+                log.debug("Não foi possível obter nome do usuário para metadata da subscription");
+            }
+
+            SessionCreateParams.SubscriptionData.Builder subDataBuilder = SessionCreateParams.SubscriptionData.builder()
                     .putMetadata("companyId", companyId.toString())
-                    .putMetadata("credits", creditsStr)
-                    .build());
+                    .putMetadata("credits", creditsStr);
+
+            if (interval != null) {
+                subDataBuilder.putMetadata("interval", interval);
+            }
+
+            if (purchasedByName != null) {
+                subDataBuilder.putMetadata("purchasedByName", purchasedByName);
+            }
+
+            builder.setSubscriptionData(subDataBuilder.build());
         }
 
         Session session = Session.create(builder.build());
@@ -199,6 +255,7 @@ public class StripeService {
         Map<String, String> metadata = session.getMetadata();
         String companyIdStr = metadata != null ? metadata.get("companyId") : null;
         String creditsStr = metadata != null ? metadata.get("credits") : null;
+        String interval = metadata != null ? metadata.get("interval") : null;
 
         // For subscriptions, metadata may be on the subscription
         if ((companyIdStr == null || creditsStr == null) && "subscription".equals(session.getMode())) {
@@ -209,6 +266,7 @@ public class StripeService {
                 if (subMeta != null) {
                     if (companyIdStr == null) companyIdStr = subMeta.get("companyId");
                     if (creditsStr == null) creditsStr = subMeta.get("credits");
+                    if (interval == null) interval = subMeta.get("interval");
                 }
             }
         }
@@ -218,10 +276,16 @@ public class StripeService {
             return false;
         }
 
+        String sourceType = "subscription".equals(session.getMode()) ? "RECURRING" : "ONE_TIME";
+
         addCredits(
                 UUID.fromString(companyIdStr),
                 new BigDecimal(creditsStr),
-                sessionId
+                sessionId,
+                null,
+                sourceType,
+                interval,
+                session.getCustomer()
         );
         log.info("Verified and added {} credits for session {}", creditsStr, sessionId);
         return true;
@@ -231,16 +295,16 @@ public class StripeService {
     public void handleWebhook(String payload, String sigHeader, String webhookType) {
         Event event;
 
+        String secretToUse = "minimal".equals(webhookType) ? endpointSecretMinimal : endpointSecret;
         try {
-            String secretToUse = "minimal".equals(webhookType) ? endpointSecretMinimal : endpointSecret;
             event = Webhook.constructEvent(payload, sigHeader, secretToUse);
             log.info("Successfully validated {} webhook signature for event: {}", webhookType, event.getType());
         } catch (IllegalArgumentException e) {
             log.error("Invalid JSON payload in {} webhook", webhookType, e);
-            return;
+            throw new IllegalArgumentException("Payload JSON inválido", e);
         } catch (SignatureVerificationException e) {
             log.error("Invalid signature for {} webhook", webhookType, e);
-            return;
+            throw new IllegalArgumentException("Assinatura do webhook inválida", e);
         }
 
         switch (event.getType()) {
@@ -249,6 +313,9 @@ public class StripeService {
                 break;
             case "invoice.payment_succeeded":
                 handleInvoicePaymentSucceeded(event);
+                break;
+            case "customer.subscription.deleted":
+                handleSubscriptionDeleted(event);
                 break;
             default:
                 log.info("Unhandled {} webhook event type: {}", webhookType, event.getType());
@@ -305,18 +372,34 @@ public class StripeService {
 
             if (metadata == null || metadata.get("companyId") == null || metadata.get("credits") == null) {
                 log.warn("Subscription {} missing companyId or credits metadata", subscriptionId);
-                return;
+                throw new RuntimeException("Subscription " + subscriptionId + " sem metadata companyId/credits");
+            }
+
+            String purchasedByName = metadata.get("purchasedByName");
+            String interval = metadata.get("interval");
+
+            // Fallback: extract interval from subscription price if not in metadata
+            if (interval == null && subscription.getItems() != null && !subscription.getItems().getData().isEmpty()) {
+                Price subPrice = subscription.getItems().getData().get(0).getPrice();
+                if (subPrice != null && subPrice.getRecurring() != null) {
+                    interval = subPrice.getRecurring().getInterval();
+                }
             }
 
             addCredits(
                     UUID.fromString(metadata.get("companyId")),
                     new BigDecimal(metadata.get("credits")),
-                    invoice.getId()
+                    invoice.getId(),
+                    purchasedByName,
+                    "RECURRING",
+                    interval,
+                    invoice.getCustomer()
             );
             log.info("Added {} credits for subscription invoice {}", metadata.get("credits"), invoice.getId());
-
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Error processing invoice.payment_succeeded for subscription {}", subscriptionId, e);
+            throw new RuntimeException("Erro ao processar invoice.payment_succeeded para subscription " + subscriptionId, e);
         }
     }
 
@@ -370,7 +453,15 @@ public class StripeService {
 
         if (companyIdStr != null && creditsStr != null) {
             try {
-                addCredits(UUID.fromString(companyIdStr), new BigDecimal(creditsStr), session.getId());
+                addCredits(
+                        UUID.fromString(companyIdStr),
+                        new BigDecimal(creditsStr),
+                        session.getId(),
+                        null,
+                        "ONE_TIME",
+                        null,
+                        session.getCustomer()
+                );
                 log.info("Successfully processed credits for session: {}", session.getId());
             } catch (NumberFormatException e) {
                 log.error("Invalid credit amount or company ID format", e);
@@ -378,7 +469,161 @@ public class StripeService {
         }
     }
 
-    private void addCredits(UUID companyId, BigDecimal amount, String stripeSessionId) {
+    /**
+     * Calculate expiration date based on source type and interval.
+     * - ONE_TIME: 30 days from now
+     * - RECURRING: depends on interval (day, week, month, year)
+     * - MANUAL: 30 days from now (default)
+     */
+    private Instant calculateExpiresAt(String sourceType, String interval) {
+        Instant now = Instant.now();
+        if ("RECURRING".equals(sourceType) && interval != null) {
+            return switch (interval) {
+                case "day" -> now.plus(1, ChronoUnit.DAYS);
+                case "week" -> now.plus(7, ChronoUnit.DAYS);
+                case "month" -> now.plus(30, ChronoUnit.DAYS);
+                case "year" -> now.plus(365, ChronoUnit.DAYS);
+                default -> now.plus(30, ChronoUnit.DAYS);
+            };
+        }
+        // ONE_TIME and MANUAL: default 30 days
+        return now.plus(30, ChronoUnit.DAYS);
+    }
+
+    /**
+     * Handle customer.subscription.deleted webhook event.
+     * Logs the cancellation. Credits from the cancelled subscription keep their original expiration.
+     */
+    private void handleSubscriptionDeleted(Event event) {
+        log.info("Processing customer.subscription.deleted");
+
+        Optional<com.stripe.model.StripeObject> object = event.getDataObjectDeserializer().getObject();
+        if (object.isEmpty()) {
+            log.error("Could not deserialize subscription from webhook event");
+            return;
+        }
+
+        if (!(object.get() instanceof Subscription)) {
+            log.error("Expected Subscription but got: {}", object.get().getClass().getSimpleName());
+            return;
+        }
+
+        Subscription subscription = (Subscription) object.get();
+        Map<String, String> metadata = subscription.getMetadata();
+        String companyId = metadata != null ? metadata.get("companyId") : "unknown";
+
+        log.info("Subscription {} deleted for company {}. Credits will expire naturally.",
+                subscription.getId(), companyId);
+    }
+
+    /**
+     * Get active subscription for a company.
+     * Queries Stripe API using the company's stripeCustomerId.
+     */
+    public SubscriptionInfoDto getActiveSubscription(UUID companyId) throws Exception {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
+
+        String customerId = company.getStripeCustomerId();
+        if (customerId == null || customerId.isBlank()) {
+            return null;
+        }
+
+        SubscriptionListParams params = SubscriptionListParams.builder()
+                .setCustomer(customerId)
+                .setStatus(SubscriptionListParams.Status.ACTIVE)
+                .setLimit(1L)
+                .build();
+
+        SubscriptionCollection subscriptions = Subscription.list(params);
+        if (subscriptions.getData().isEmpty()) {
+            return null;
+        }
+
+        Subscription sub = subscriptions.getData().get(0);
+        Map<String, String> metadata = sub.getMetadata();
+
+        String planName = "Plano";
+        Integer credits = null;
+        String interval = null;
+        Long unitAmount = null;
+        String currency = null;
+
+        if (sub.getItems() != null && !sub.getItems().getData().isEmpty()) {
+            var item = sub.getItems().getData().get(0);
+            Price subPrice = item.getPrice();
+            if (subPrice != null) {
+                unitAmount = subPrice.getUnitAmount();
+                currency = subPrice.getCurrency();
+                if (subPrice.getRecurring() != null) {
+                    interval = subPrice.getRecurring().getInterval();
+                }
+                // Fetch product for name
+                try {
+                    Product product = Product.retrieve(subPrice.getProduct());
+                    planName = product.getName();
+                } catch (Exception e) {
+                    log.debug("Could not fetch product name: {}", e.getMessage());
+                }
+            }
+        }
+
+        if (metadata != null && metadata.get("credits") != null) {
+            try {
+                credits = Integer.parseInt(metadata.get("credits"));
+            } catch (NumberFormatException e) {
+                log.debug("Invalid credits metadata on subscription");
+            }
+        }
+        if (metadata != null && metadata.get("interval") != null && interval == null) {
+            interval = metadata.get("interval");
+        }
+
+        return SubscriptionInfoDto.builder()
+                .subscriptionId(sub.getId())
+                .status(sub.getStatus())
+                .planName(planName)
+                .credits(credits)
+                .interval(interval)
+                .currentPeriodEnd(sub.getCurrentPeriodEnd())
+                .cancelAtPeriodEnd(sub.getCancelAtPeriodEnd())
+                .unitAmount(unitAmount)
+                .currency(currency)
+                .build();
+    }
+
+    /**
+     * Cancel the active subscription for a company immediately.
+     */
+    public void cancelActiveSubscription(UUID companyId) throws Exception {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
+
+        String customerId = company.getStripeCustomerId();
+        if (customerId == null || customerId.isBlank()) {
+            throw new RuntimeException("Empresa não possui customer no Stripe");
+        }
+
+        SubscriptionListParams params = SubscriptionListParams.builder()
+                .setCustomer(customerId)
+                .setStatus(SubscriptionListParams.Status.ACTIVE)
+                .setLimit(10L)
+                .build();
+
+        SubscriptionCollection subscriptions = Subscription.list(params);
+        if (subscriptions.getData().isEmpty()) {
+            throw new RuntimeException("Nenhuma assinatura ativa encontrada");
+        }
+
+        for (Subscription sub : subscriptions.getData()) {
+            sub.cancel(SubscriptionCancelParams.builder().build());
+            log.info("Cancelled subscription {} for company {}", sub.getId(), companyId);
+        }
+    }
+
+    private void addCredits(UUID companyId, BigDecimal amount, String stripeSessionId,
+                            String webhookPurchasedByName, String sourceType, String interval,
+                            String stripeCustomerId) {
         if (stripeSessionId != null && creditTransactionRepository.existsByStripeSessionId(stripeSessionId)) {
             log.info("Transaction for session {} already processed.", stripeSessionId);
             return;
@@ -398,6 +643,23 @@ public class StripeService {
             companyRepository.save(company);
         }
 
+        // Save stripeCustomerId on company if provided and not yet set
+        if (stripeCustomerId != null && !stripeCustomerId.isBlank()) {
+            Company company = credit.getCompany();
+            if (company == null) {
+                company = companyRepository.findById(companyId)
+                        .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
+            }
+            if (company.getStripeCustomerId() == null || company.getStripeCustomerId().isBlank()) {
+                company.setStripeCustomerId(stripeCustomerId);
+                companyRepository.save(company);
+                log.info("Saved Stripe customer ID {} for company {}", stripeCustomerId, companyId);
+            }
+        }
+
+        // Calculate expiration
+        Instant expiresAt = calculateExpiresAt(sourceType, interval);
+
         credit.setCreditAmount(credit.getCreditAmount().add(amount));
         companyCreditRepository.save(credit);
 
@@ -405,15 +667,24 @@ public class StripeService {
         transaction.setCompanyCredit(credit);
         transaction.setAmount(amount);
         transaction.setStripeSessionId(stripeSessionId);
+        transaction.setRemainingAmount(amount);
+        transaction.setExpiresAt(expiresAt);
+        transaction.setSourceType(sourceType != null ? sourceType : "ONE_TIME");
+        transaction.setIntervalType(interval);
 
-        // Capture the user who made the purchase
+        // Capturar o usuário responsável pela transação
         try {
             authService.getCurrentUser().ifPresent(user -> {
                 transaction.setPurchasedBy(user.getKeycloakId());
                 transaction.setPurchasedByName(user.getName() != null ? user.getName() : user.getUsername());
             });
         } catch (Exception e) {
-            log.debug("Could not resolve current user for transaction (webhook context): {}", e.getMessage());
+            log.debug("Contexto de usuário não disponível (webhook): {}", e.getMessage());
+        }
+
+        // Para renovações via webhook, usar o nome armazenado nos metadata da subscription
+        if (transaction.getPurchasedByName() == null && webhookPurchasedByName != null) {
+            transaction.setPurchasedByName(webhookPurchasedByName);
         }
 
         try {
@@ -423,6 +694,7 @@ public class StripeService {
             throw e;
         }
 
-        log.info("Added {} credits to company {}", amount, companyId);
+        log.info("Added {} credits to company {} (expires at {}, source: {}, interval: {})",
+                amount, companyId, expiresAt, sourceType, interval);
     }
 }

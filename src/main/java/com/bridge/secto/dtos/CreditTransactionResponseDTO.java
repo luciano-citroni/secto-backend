@@ -22,4 +22,12 @@ public class CreditTransactionResponseDTO {
     private String purchasedByName;
     @Schema(description = "Data/hora da transação")
     private Instant createdAt;
+    @Schema(description = "Data/hora de expiração dos créditos")
+    private Instant expiresAt;
+    @Schema(description = "Créditos restantes neste lote (não consumidos e não expirados)")
+    private BigDecimal remainingAmount;
+    @Schema(description = "Tipo da fonte: RECURRING, ONE_TIME, MANUAL, USAGE")
+    private String sourceType;
+    @Schema(description = "Intervalo de recorrência: day, week, month, year")
+    private String intervalType;
 }

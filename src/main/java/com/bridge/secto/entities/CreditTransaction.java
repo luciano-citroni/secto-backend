@@ -1,6 +1,7 @@
 package com.bridge.secto.entities;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -32,4 +33,16 @@ public class CreditTransaction extends BaseEntity {
 
     @Column(name = "purchased_by_name")
     private String purchasedByName;
+
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+
+    @Column(name = "remaining_amount", precision = 19, scale = 2)
+    private BigDecimal remainingAmount;
+
+    @Column(name = "source_type", length = 20)
+    private String sourceType;
+
+    @Column(name = "interval_type", length = 20)
+    private String intervalType;
 }

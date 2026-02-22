@@ -20,6 +20,7 @@ import com.bridge.secto.entities.CompanyCredit;
 import com.bridge.secto.exceptions.BusinessRuleException;
 import com.bridge.secto.exceptions.ResourceNotFoundException;
 import com.bridge.secto.repositories.CompanyRepository;
+import com.bridge.secto.services.CreditService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 public class CompanyCreditController {
 
     private final CompanyRepository companyRepository;
+    private final CreditService creditService;
 
     @Operation(summary = "Criar conta de crédito", description = "Cria uma conta de crédito para uma empresa. Cada empresa pode ter apenas uma conta de crédito")
     @ApiResponses(value = {
@@ -90,6 +92,9 @@ public class CompanyCreditController {
             companyRepository.save(company);
         }
         
+        // Recalculate balance considering expired credits
+        creditService.recalculateBalance(credit);
+
         CompanyCreditResponseDto dto = new CompanyCreditResponseDto();
         dto.setId(credit.getId());
         dto.setCreditAmount(credit.getCreditAmount());

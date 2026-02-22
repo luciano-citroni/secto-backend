@@ -33,6 +33,9 @@ public class Company extends BaseEntity {
     @OneToOne(cascade = CascadeType.ALL, fetch=FetchType.LAZY)
     @JoinColumn(name = "company_credit_id", referencedColumnName = "id")
     private CompanyCredit companyCredit;
+
+    @Column(name = "stripe_customer_id")
+    private String stripeCustomerId;
     
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, fetch=FetchType.LAZY)
     private List<ServiceType> serviceTypes;

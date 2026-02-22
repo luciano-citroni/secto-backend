@@ -1,6 +1,8 @@
 package com.bridge.secto.services;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -37,31 +39,81 @@ public class CreditService {
     }
 
     /**
-     * Verifica se a empresa tem créditos suficientes
+     * Recalcula o saldo de créditos da empresa considerando apenas lotes não expirados.
+     * Atualiza o campo creditAmount da CompanyCredit.
      */
-    public boolean hasEnoughCredits(UUID companyId, double requiredCredits) {
-        CompanyCredit companyCredit = getCompanyCredit(companyId);
-        return companyCredit.getCreditAmount().compareTo(BigDecimal.valueOf(requiredCredits)) >= 0;
+    @Transactional
+    public BigDecimal recalculateBalance(CompanyCredit companyCredit) {
+        BigDecimal validBalance = creditTransactionRepository.sumValidRemainingCredits(
+                companyCredit.getId(), Instant.now());
+        companyCredit.setCreditAmount(validBalance);
+        companyCreditRepository.save(companyCredit);
+        log.debug("Saldo recalculado para company_credit {}: {}", companyCredit.getId(), validBalance);
+        return validBalance;
     }
 
     /**
-     * Desconta créditos da empresa e cria transação
+     * Retorna o saldo de créditos válidos (não expirados) da empresa.
+     */
+    @Transactional
+    public BigDecimal getValidCredits(UUID companyId) {
+        CompanyCredit companyCredit = getCompanyCredit(companyId);
+        return recalculateBalance(companyCredit);
+    }
+
+    /**
+     * Verifica se a empresa tem créditos válidos suficientes (recalcula saldo antes)
+     */
+    @Transactional
+    public boolean hasEnoughCredits(UUID companyId, double requiredCredits) {
+        BigDecimal validBalance = getValidCredits(companyId);
+        return validBalance.compareTo(BigDecimal.valueOf(requiredCredits)) >= 0;
+    }
+
+    /**
+     * Desconta créditos usando FIFO — consome primeiro dos lotes que expiram mais cedo.
+     * Cria uma transação de uso (valor negativo) e atualiza o saldo.
      */
     @Transactional
     public void debitCredits(UUID companyId, double creditsToDebit, String description) {
         CompanyCredit companyCredit = getCompanyCredit(companyId);
-        
-        BigDecimal currentAmount = companyCredit.getCreditAmount();
+
+        // Recalcular saldo com base em lotes válidos
+        BigDecimal validBalance = recalculateBalance(companyCredit);
         BigDecimal debitAmount = BigDecimal.valueOf(creditsToDebit);
-        
-        if (currentAmount.compareTo(debitAmount) < 0) {
-            throw new BusinessRuleException("Créditos insuficientes. Saldo atual: " + currentAmount + " créditos");
+
+        if (validBalance.compareTo(debitAmount) < 0) {
+            throw new BusinessRuleException("Créditos insuficientes. Saldo atual: " + validBalance + " créditos");
+        }
+
+        // FIFO: buscar lotes válidos ordenados por expiração (mais próximo primeiro)
+        List<CreditTransaction> validLots = creditTransactionRepository
+                .findByCompanyCreditIdAndAmountGreaterThanAndRemainingAmountGreaterThanAndExpiresAtAfterOrderByExpiresAtAsc(
+                        companyCredit.getId(), BigDecimal.ZERO, BigDecimal.ZERO, Instant.now());
+
+        BigDecimal remaining = debitAmount;
+        for (CreditTransaction lot : validLots) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+
+            BigDecimal lotRemaining = lot.getRemainingAmount();
+            if (lotRemaining.compareTo(remaining) >= 0) {
+                // Este lote cobre o restante
+                lot.setRemainingAmount(lotRemaining.subtract(remaining));
+                remaining = BigDecimal.ZERO;
+            } else {
+                // Consome tudo deste lote e segue para o próximo
+                remaining = remaining.subtract(lotRemaining);
+                lot.setRemainingAmount(BigDecimal.ZERO);
+            }
+            creditTransactionRepository.save(lot);
         }
 
         // Criar transação de débito (valor negativo)
         CreditTransaction transaction = new CreditTransaction();
         transaction.setAmount(debitAmount.negate());
         transaction.setCompanyCredit(companyCredit);
+        transaction.setRemainingAmount(BigDecimal.ZERO);
+        transaction.setSourceType("USAGE");
 
         // Registrar o usuário responsável pela transação
         try {
@@ -75,11 +127,10 @@ public class CreditService {
 
         creditTransactionRepository.save(transaction);
 
-        // Atualizar saldo da empresa
-        companyCredit.setCreditAmount(currentAmount.subtract(debitAmount));
-        companyCreditRepository.save(companyCredit);
+        // Recalcular saldo após débito
+        recalculateBalance(companyCredit);
 
-        log.info("Créditos debitados com sucesso. Empresa: {}, Valor: {}, Saldo atual: {}", 
+        log.info("Créditos debitados com sucesso (FIFO). Empresa: {}, Valor: {}, Saldo atual: {}",
                 companyId, creditsToDebit, companyCredit.getCreditAmount());
     }
 
