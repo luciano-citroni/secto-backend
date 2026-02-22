@@ -117,18 +117,7 @@ public class KeycloakAdminService {
      */
     public String createCompanyUser(String firstName, String lastName, String email,
                                   String username, String password, UUID companyId) {
-        
-        String userId = createUser(firstName, lastName, email, username, password, companyId);
-        
-        // Atribuir role de usuário regular
-        try {
-            String adminToken = getAdminToken();
-            assignCompanyUserRole(userId, adminToken);
-        } catch (Exception e) {
-            log.warn("Erro ao atribuir role de usuário: {}", e.getMessage());
-        }
-        
-        return userId;
+        return createUser(firstName, lastName, email, username, password, companyId);
     }
 
     private String getAdminToken() {
@@ -158,13 +147,42 @@ public class KeycloakAdminService {
     }
 
     private void assignCompanyAdminRole(String userId, String token) {
-        // Implementar atribuição de role company-admin
         log.info("Atribuindo role company-admin ao usuário: {}", userId);
-    }
 
-    private void assignCompanyUserRole(String userId, String token) {
-        // Implementar atribuição de role company-user
-        log.info("Atribuindo role company-user ao usuário: {}", userId);
+        String baseUrl = getNormalizedBaseUrl();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
+
+        // 1. Buscar a representação da role "company-admin" no realm
+        String getRoleUrl = String.format("%s/admin/realms/%s/roles/%s", baseUrl, realm, "company-admin");
+        try {
+            ResponseEntity<Map> roleResponse = restTemplate.exchange(
+                    getRoleUrl,
+                    org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    Map.class
+            );
+
+            if (roleResponse.getStatusCode() != HttpStatus.OK || roleResponse.getBody() == null) {
+                throw new RuntimeException("Role company-admin não encontrada no Keycloak");
+            }
+
+            Map<String, Object> roleRepresentation = roleResponse.getBody();
+
+            // 2. Atribuir a role ao usuário
+            String assignRoleUrl = String.format("%s/admin/realms/%s/users/%s/role-mappings/realm",
+                    baseUrl, realm, userId);
+
+            HttpEntity<List<Map<String, Object>>> assignRequest = new HttpEntity<>(List.of(roleRepresentation), headers);
+            restTemplate.postForEntity(assignRoleUrl, assignRequest, String.class);
+
+            log.info("Role company-admin atribuída com sucesso ao usuário: {}", userId);
+        } catch (Exception e) {
+            log.error("Erro ao atribuir role company-admin ao usuário {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Falha ao atribuir role company-admin: " + e.getMessage());
+        }
     }
 
     /**
