@@ -27,4 +27,5 @@ public class AnalysisResultResponseDto {
     private UUID serviceSubTypeId;
     private String serviceSubTypeName;
     private String scriptName;
+    private UUID scriptId;
 }
