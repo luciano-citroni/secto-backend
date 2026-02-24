@@ -1,0 +1,448 @@
+/* ===== SECTOTECH Keycloak Theme ===== */
+/* Para alterar as cores, basta modificar as variáveis abaixo */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Brand - altere aqui para mudar a cor principal */
+  --brand: oklch(0.6177 0.1701 44.26);
+  --brand-fallback: #c06a2e;
+  --brand-hover: oklch(0.5577 0.1531 44.26);
+  --brand-hover-fallback: #a55a26;
+
+  /* Backgrounds */
+  --background: #ffffff;
+  --background-fallback: #ffffff;
+  --background-subtle: #f9fafb;
+  --background-subtle-fallback: #f9fafb;
+
+  /* Text */
+  --foreground: #1c1c1c;
+  --foreground-fallback: #1c1c1c;
+  --muted-foreground: #7a7a7a;
+  --muted-foreground-fallback: #7a7a7a;
+
+  /* Card */
+  --card: #ffffff;
+  --card-fallback: #ffffff;
+  --card-foreground: #1c1c1c;
+  --card-foreground-fallback: #1c1c1c;
+
+  /* Borders & Inputs */
+  --border: #e5e5e5;
+  --input-border: #d4d4d4;
+  --input-bg: #ffffff;
+  --input-bg-fallback: #ffffff;
+  --input-focus: oklch(0.6177 0.1701 44.26);
+
+  /* Radius */
+  --radius: 0.625rem;
+
+  /* Alerts */
+  --destructive: #ef4444;
+  --destructive-fallback: #ef4444;
+  --destructive-bg: #fef2f2;
+  --success: #22c55e;
+  --success-bg: #f0fdf4;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --info: #3b82f6;
+  --info-bg: #eff6ff;
+}
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--background-subtle-fallback);
+  background-color: var(--background-subtle);
+  color: var(--foreground-fallback);
+  color: var(--foreground);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--brand-fallback);
+  color: var(--brand);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* ===== Layout ===== */
+.login-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.login-card {
+  background: var(--card-fallback);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 420px;
+  padding: 2rem;
+}
+
+/* ===== Header / Logo ===== */
+.login-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.login-logo {
+  height: 40px;
+  width: auto;
+}
+
+/* ===== Title ===== */
+.login-title-section {
+  margin-bottom: 0.25rem;
+}
+
+.login-title-section h1,
+.login-title-section .login-page-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--card-foreground);
+  margin: 0;
+}
+
+.login-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+/* ===== Alerts / Messages ===== */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+}
+
+.alert-error {
+  background-color: var(--destructive-bg);
+  color: var(--destructive);
+  border-color: #fecaca;
+}
+
+.alert-success {
+  background-color: var(--success-bg);
+  color: var(--success);
+  border-color: #bbf7d0;
+}
+
+.alert-warning {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+  border-color: #fde68a;
+}
+
+.alert-info {
+  background-color: var(--info-bg);
+  color: var(--info);
+  border-color: #bfdbfe;
+}
+
+/* ===== Form Elements ===== */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  margin-bottom: 0.375rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="email"],
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--foreground-fallback);
+  color: var(--foreground);
+  background: var(--input-bg-fallback);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--brand-fallback);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(192, 106, 46, 0.15);
+}
+
+.form-group input::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+}
+
+/* ===== Checkbox ===== */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--brand-fallback);
+  cursor: pointer;
+}
+
+.checkbox-group label {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* ===== Form Actions Row ===== */
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.forgot-password {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  transition: color 0.15s ease;
+}
+
+.forgot-password:hover {
+  color: var(--brand-fallback);
+  color: var(--brand);
+  opacity: 1;
+}
+
+/* ===== Buttons ===== */
+.btn-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: #ffffff;
+  background-color: var(--brand-fallback);
+  background-color: var(--brand);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  margin-top: 0.5rem;
+}
+
+.btn-brand:hover {
+  background-color: var(--brand-hover-fallback);
+  background-color: var(--brand-hover);
+}
+
+.btn-brand:active {
+  transform: scale(0.99);
+}
+
+.btn-brand:focus-visible {
+  outline: 2px solid var(--brand-fallback);
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.btn-link:hover {
+  color: var(--foreground);
+}
+
+/* ===== Divider ===== */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--border);
+}
+
+/* ===== Social Providers ===== */
+.social-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.social-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--foreground-fallback);
+  color: var(--foreground);
+  background-color: var(--input-bg-fallback);
+  background-color: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  text-decoration: none;
+}
+
+.social-btn:hover {
+  background-color: var(--background-fallback);
+  background-color: var(--background);
+  color: var(--foreground-fallback);
+  color: var(--foreground);
+  opacity: 1;
+}
+
+/* ===== Footer / Links ===== */
+.login-footer {
+  text-align: center;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.login-footer p {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.login-footer a {
+  font-weight: 500;
+}
+
+.login-info {
+  margin-top: 1rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.login-info p {
+  margin: 0;
+}
+
+/* ===== Required fields asterisk ===== */
+.required {
+  color: var(--destructive);
+}
+
+/* ===== Back link ===== */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin-top: 1rem;
+  text-align: center;
+  width: 100%;
+  justify-content: center;
+}
+
+.back-link:hover {
+  color: var(--foreground);
+  opacity: 1;
+}
+
+/* ===== Two columns (name fields) ===== */
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+/* ===== Hide Keycloak default elements ===== */
+#kc-header,
+#kc-header-wrapper {
+  display: none !important;
+}
