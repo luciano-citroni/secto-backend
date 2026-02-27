@@ -92,11 +92,170 @@
                     ${msg("doLogIn")}
                 </button>
             </form>
+
+            <script>
+            (function() {
+                var form = document.getElementById('kc-form-login');
+                var usernameInput = document.getElementById('username');
+                var passwordInput = document.getElementById('password');
+
+                // Keycloak default: letters, numbers, dot, hyphen, underscore, @
+                var usernameRegex = /^[a-zA-Z0-9._\-@]+$/;
+                // Email regex for when input looks like an email
+                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                function removeValidationError(input) {
+                    var existing = input.parentNode.querySelector('.client-validation-error');
+                    if (existing) existing.remove();
+                    input.setAttribute('aria-invalid', 'false');
+                    input.style.borderColor = '';
+                }
+
+                function showValidationError(input, message) {
+                    removeValidationError(input);
+                    input.setAttribute('aria-invalid', 'true');
+                    input.style.borderColor = '#ef4444';
+                    var span = document.createElement('span');
+                    span.className = 'alert alert-error client-validation-error';
+                    span.style.marginTop = '0.25rem';
+                    span.style.display = 'block';
+                    span.style.padding = '0.5rem 0.75rem';
+                    span.style.fontSize = '0.8rem';
+                    span.textContent = message;
+                    input.parentNode.appendChild(span);
+                }
+
+                function validateUsername(value) {
+                    if (!value || value.trim().length === 0) {
+                        return 'O campo de usuário é obrigatório.';
+                    }
+                    if (/\s/.test(value)) {
+                        return 'O nome de usuário não pode conter espaços.';
+                    }
+                    // If it contains @, validate as email
+                    if (value.indexOf('@') !== -1) {
+                        if (!emailRegex.test(value)) {
+                            return 'Formato de e-mail inválido.';
+                        }
+                        return null;
+                    }
+                    if (!usernameRegex.test(value)) {
+                        return 'O nome de usuário só pode conter letras, números, ponto (.), hífen (-) e underline (_).';
+                    }
+                    if (value.length < 3) {
+                        return 'O nome de usuário deve ter pelo menos 3 caracteres.';
+                    }
+                    return null;
+                }
+
+                function validatePassword(value) {
+                    if (!value || value.length === 0) {
+                        return 'O campo de senha é obrigatório.';
+                    }
+                    return null;
+                }
+
+                // Block invalid characters on keypress for username
+                usernameInput.addEventListener('keypress', function(e) {
+                    var char = String.fromCharCode(e.which || e.keyCode);
+                    // Allow control keys
+                    if (e.ctrlKey || e.metaKey || e.which < 32) return;
+                    // Block spaces
+                    if (char === ' ') {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+
+                // Block paste of invalid content for username
+                usernameInput.addEventListener('paste', function(e) {
+                    var pasted = (e.clipboardData || window.clipboardData).getData('text');
+                    // Remove spaces from pasted content
+                    var cleaned = pasted.replace(/\s/g, '');
+                    if (cleaned !== pasted) {
+                        e.preventDefault();
+                        // Insert cleaned version
+                        var start = this.selectionStart;
+                        var end = this.selectionEnd;
+                        var val = this.value;
+                        this.value = val.substring(0, start) + cleaned + val.substring(end);
+                        this.setSelectionRange(start + cleaned.length, start + cleaned.length);
+                        // Trigger validation
+                        this.dispatchEvent(new Event('input'));
+                    }
+                });
+
+                // Real-time validation on input
+                usernameInput.addEventListener('input', function() {
+                    var value = this.value;
+                    if (value.length > 0) {
+                        var error = validateUsername(value);
+                        if (error) {
+                            showValidationError(this, error);
+                        } else {
+                            removeValidationError(this);
+                        }
+                    } else {
+                        removeValidationError(this);
+                    }
+                });
+
+                // Validate on blur
+                usernameInput.addEventListener('blur', function() {
+                    var error = validateUsername(this.value);
+                    if (error) {
+                        showValidationError(this, error);
+                    } else {
+                        removeValidationError(this);
+                    }
+                });
+
+                passwordInput.addEventListener('blur', function() {
+                    var error = validatePassword(this.value);
+                    if (error) {
+                        showValidationError(this, error);
+                    } else {
+                        removeValidationError(this);
+                    }
+                });
+
+                // Form submit validation
+                form.addEventListener('submit', function(e) {
+                    var usernameError = validateUsername(usernameInput.value);
+                    var passwordError = validatePassword(passwordInput.value);
+                    var hasError = false;
+
+                    if (usernameError) {
+                        showValidationError(usernameInput, usernameError);
+                        hasError = true;
+                    } else {
+                        removeValidationError(usernameInput);
+                    }
+
+                    if (passwordError) {
+                        showValidationError(passwordInput, passwordError);
+                        hasError = true;
+                    } else {
+                        removeValidationError(passwordInput);
+                    }
+
+                    if (hasError) {
+                        e.preventDefault();
+                        // Focus first invalid field
+                        if (usernameError) {
+                            usernameInput.focus();
+                        } else {
+                            passwordInput.focus();
+                        }
+                    }
+                });
+            })();
+            </script>
         </#if>
 
         <#-- Link para registro -->
         <div class="login-footer">
-            <p>Não possui uma conta ainda? <a href="https://sectotech.wearebridge.com.br/registrar">Registre-se</a></p>
+            <p>Não possui uma conta ainda? <a href="${properties.frontendBaseUrl}/registrar">Registre-se</a></p>
         </div>
 
     </#if>
