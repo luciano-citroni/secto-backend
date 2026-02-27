@@ -99,7 +99,8 @@ public class CompanyRegistrationService {
      */
     @Transactional
     public String addUserToCompany(String firstName, String lastName, String email,
-                                 String username, String password, java.util.UUID companyId) {
+                                 String username, String password, java.util.UUID companyId,
+                                 boolean isAdmin) {
         
         // Verificar se empresa existe
         Company company = companyRepository.findById(companyId)
@@ -107,6 +108,6 @@ public class CompanyRegistrationService {
             
         // Criar usuário no Keycloak
         return keycloakAdminService.createCompanyUser(
-            firstName, lastName, email, username, password, companyId);
+            firstName, lastName, email, username, password, companyId, isAdmin);
     }
 }

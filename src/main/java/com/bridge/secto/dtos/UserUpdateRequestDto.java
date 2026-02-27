@@ -21,4 +21,7 @@ public class UserUpdateRequestDto {
     @Email(message = "E-mail inválido")
     @Schema(description = "E-mail do usuário", example = "joao@empresa.com")
     private String email;
+
+    @Schema(description = "Se o usuário deve possuir a role de administrador da empresa", example = "false")
+    private Boolean isAdmin;
 }

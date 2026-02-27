@@ -66,6 +66,11 @@ public class CompanyUserController {
 
         keycloakAdminService.updateUser(userId, request.getFirstName(), request.getLastName(), request.getEmail());
 
+        // Se o caller é admin e mandou o campo isAdmin, atualizar a role
+        if (isAdmin && request.getIsAdmin() != null) {
+            keycloakAdminService.setCompanyAdminRole(userId, request.getIsAdmin());
+        }
+
         return ResponseEntity.ok(Map.of("message", "Usuário atualizado com sucesso"));
     }
 

@@ -113,11 +113,59 @@ public class KeycloakAdminService {
     }
 
     /**
-     * Criar usuário regular (não admin) na empresa
+     * Criar usuário regular (não admin) na empresa.
+     * Se isAdmin=true, atribui a role company-admin.
      */
     public String createCompanyUser(String firstName, String lastName, String email,
-                                  String username, String password, UUID companyId) {
-        return createUser(firstName, lastName, email, username, password, companyId);
+                                  String username, String password, UUID companyId, boolean isAdmin) {
+        try {
+            String adminToken = getAdminToken();
+
+            Map<String, Object> userPayload = Map.of(
+                "firstName", firstName,
+                "lastName", lastName,
+                "email", email,
+                "username", username,
+                "enabled", true,
+                "credentials", new Object[]{Map.of(
+                    "type", "password",
+                    "value", password,
+                    "temporary", false
+                )},
+                "attributes", Map.of(
+                    "company_id", companyId.toString()
+                )
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(userPayload, headers);
+
+            String createUserUrl = String.format("%s/admin/realms/%s/users", getNormalizedBaseUrl(), realm);
+            log.info("Creating company user at URL: {}", createUserUrl);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(createUserUrl, request, String.class);
+
+            if (response.getStatusCode() == HttpStatus.CREATED) {
+                String location = response.getHeaders().getLocation().toString();
+                String userId = location.substring(location.lastIndexOf("/") + 1);
+
+                if (isAdmin) {
+                    assignCompanyAdminRole(userId, adminToken);
+                }
+
+                log.info("Usuário da empresa criado com sucesso: {} (ID: {}, admin: {})", username, userId, isAdmin);
+                return userId;
+            }
+
+            throw new RuntimeException("Falha ao criar usuário: " + response.getStatusCode());
+
+        } catch (Exception e) {
+            log.error("Erro ao criar usuário no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao criar usuário: " + e.getMessage());
+        }
     }
 
     private String getAdminToken() {
@@ -182,6 +230,92 @@ public class KeycloakAdminService {
         } catch (Exception e) {
             log.error("Erro ao atribuir role company-admin ao usuário {}: {}", userId, e.getMessage(), e);
             throw new RuntimeException("Falha ao atribuir role company-admin: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Remover a role company-admin de um usuário
+     */
+    public void removeCompanyAdminRole(String userId) {
+        log.info("Removendo role company-admin do usuário: {}", userId);
+
+        String adminToken = getAdminToken();
+        String baseUrl = getNormalizedBaseUrl();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(adminToken);
+
+        String getRoleUrl = String.format("%s/admin/realms/%s/roles/%s", baseUrl, realm, "company-admin");
+        try {
+            ResponseEntity<Map> roleResponse = restTemplate.exchange(
+                    getRoleUrl,
+                    org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    Map.class
+            );
+
+            if (roleResponse.getStatusCode() != HttpStatus.OK || roleResponse.getBody() == null) {
+                throw new RuntimeException("Role company-admin não encontrada no Keycloak");
+            }
+
+            Map<String, Object> roleRepresentation = roleResponse.getBody();
+
+            String deleteRoleUrl = String.format("%s/admin/realms/%s/users/%s/role-mappings/realm",
+                    baseUrl, realm, userId);
+
+            HttpEntity<List<Map<String, Object>>> deleteRequest = new HttpEntity<>(List.of(roleRepresentation), headers);
+            restTemplate.exchange(deleteRoleUrl, org.springframework.http.HttpMethod.DELETE, deleteRequest, String.class);
+
+            log.info("Role company-admin removida com sucesso do usuário: {}", userId);
+        } catch (Exception e) {
+            log.error("Erro ao remover role company-admin do usuário {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Falha ao remover role company-admin: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Atribuir ou remover a role company-admin com base no valor de isAdmin
+     */
+    public void setCompanyAdminRole(String userId, boolean isAdmin) {
+        boolean currentlyAdmin = hasCompanyAdminRole(userId);
+        if (isAdmin && !currentlyAdmin) {
+            String adminToken = getAdminToken();
+            assignCompanyAdminRole(userId, adminToken);
+        } else if (!isAdmin && currentlyAdmin) {
+            removeCompanyAdminRole(userId);
+        }
+    }
+
+    /**
+     * Verificar se um usuário possui a role company-admin
+     */
+    @SuppressWarnings("unchecked")
+    public boolean hasCompanyAdminRole(String userId) {
+        try {
+            String adminToken = getAdminToken();
+            String baseUrl = getNormalizedBaseUrl();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(adminToken);
+
+            String rolesUrl = String.format("%s/admin/realms/%s/users/%s/role-mappings/realm",
+                    baseUrl, realm, userId);
+
+            ResponseEntity<List> response = restTemplate.exchange(
+                    rolesUrl,
+                    org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    List.class
+            );
+
+            if (response.getBody() == null) return false;
+
+            List<Map<String, Object>> roles = (List<Map<String, Object>>) response.getBody();
+            return roles.stream().anyMatch(r -> "company-admin".equals(r.get("name")));
+        } catch (Exception e) {
+            log.error("Erro ao verificar role company-admin do usuário {}: {}", userId, e.getMessage());
+            return false;
         }
     }
 
@@ -338,6 +472,11 @@ public class KeycloakAdminService {
             // Filtrar usuários pela company_id
             List<Map<String, Object>> allUsers = (List<Map<String, Object>>) response.getBody();
             List<Map<String, Object>> companyUsers = new ArrayList<>();
+
+            // Reuse admin token for role checks
+            String baseUrl = getNormalizedBaseUrl();
+            HttpHeaders roleHeaders = new HttpHeaders();
+            roleHeaders.setBearerAuth(adminToken);
             
             for (Map<String, Object> user : allUsers) {
                 Map<String, Object> attributes = (Map<String, Object>) user.get("attributes");
@@ -356,7 +495,30 @@ public class KeycloakAdminService {
                     }
                     
                     if (companyId.toString().equals(userCompanyId)) {
-                        companyUsers.add(user);
+                        // Check if user has company-admin role
+                        boolean isAdmin = false;
+                        try {
+                            String userId = (String) user.get("id");
+                            String rolesUrl = String.format("%s/admin/realms/%s/users/%s/role-mappings/realm",
+                                    baseUrl, realm, userId);
+                            ResponseEntity<List> rolesResponse = restTemplate.exchange(
+                                    rolesUrl,
+                                    org.springframework.http.HttpMethod.GET,
+                                    new HttpEntity<>(roleHeaders),
+                                    List.class
+                            );
+                            if (rolesResponse.getBody() != null) {
+                                List<Map<String, Object>> roles = (List<Map<String, Object>>) rolesResponse.getBody();
+                                isAdmin = roles.stream().anyMatch(r -> "company-admin".equals(r.get("name")));
+                            }
+                        } catch (Exception e) {
+                            log.warn("Não foi possível verificar roles do usuário {}: {}", user.get("id"), e.getMessage());
+                        }
+                        
+                        // Add isAdmin field to user data
+                        Map<String, Object> enrichedUser = new HashMap<>(user);
+                        enrichedUser.put("isAdmin", isAdmin);
+                        companyUsers.add(enrichedUser);
                     }
                 }
             }

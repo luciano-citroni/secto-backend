@@ -43,12 +43,18 @@ public class CompanyRegistrationController {
     @PostMapping("/company/users")
     @SecurityRequirement(name = "keycloak")
     @Operation(summary = "Adicionar usuário à empresa", 
-               description = "Adicionar usuários à empresa")
+               description = "Adicionar usuários à empresa. Apenas administradores da empresa podem usar este endpoint.")
     public ResponseEntity<?> addUserToCompany(@RequestBody Map<String, String> userData) {
         
+        if (!authService.isCompanyAdmin()) {
+            throw new UnauthorizedActionException("Apenas administradores da empresa podem criar novos usuários");
+        }
+
         UUID companyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
             .orElseThrow(() -> new UnauthorizedActionException("Company ID não encontrado"));
+
+        boolean isAdmin = "true".equalsIgnoreCase(userData.get("isAdmin"));
 
         String userId = registrationService.addUserToCompany(
             userData.get("firstName"),
@@ -56,7 +62,8 @@ public class CompanyRegistrationController {
             userData.get("email"),
             userData.get("username"),
             userData.get("password"),
-            companyId
+            companyId,
+            isAdmin
         );
 
         return ResponseEntity.ok(Map.of(
