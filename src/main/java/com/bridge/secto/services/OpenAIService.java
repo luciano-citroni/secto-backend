@@ -16,7 +16,6 @@ import com.bridge.secto.dtos.ScriptItemInputDto;
 import com.bridge.secto.entities.AnalysisResult;
 import com.bridge.secto.entities.Client;
 import com.bridge.secto.entities.Company;
-import com.bridge.secto.entities.Script;
 import com.bridge.secto.repositories.AnalysisResultRepository;
 import com.bridge.secto.repositories.ClientRepository;
 import com.bridge.secto.repositories.CompanyRepository;
@@ -44,73 +43,16 @@ public class OpenAIService {
     private final AuthService authService;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Validates script questions using AI to check if they are clear, well-formed,
-     * and appropriate for voice analysis scripts.
-     *
-     * @param questions list of question strings to validate
-     * @return a map with "valid" (boolean), "suggestions" (list of per-question feedback)
-     */
-    public java.util.Map<String, Object> validateScriptQuestions(List<String> questions) {
-        String questionList = questions.stream()
-                .map(q -> "- " + q)
-                .collect(Collectors.joining("\n"));
-
-        String prompt = String.format(
-            "Você é um especialista em criação de scripts de atendimento por voz para análise de conformidade contratual. " +
-            "Avalie as seguintes perguntas de script e para cada uma determine se ela é:\n" +
-            "1. Clara e objetiva (pode ser respondida de forma verificável)\n" +
-            "2. Adequada para um script de atendimento telefônico\n" +
-            "3. Sem ambiguidades ou erros gramaticais graves\n\n" +
-            "Perguntas:\n%s\n\n" +
-            "Responda SOMENTE em formato JSON válido com esta estrutura exata:\n" +
-            "{\n" +
-            "  \"valid\": true/false (true se TODAS as perguntas são adequadas),\n" +
-            "  \"suggestions\": [\n" +
-            "    {\n" +
-            "      \"question\": \"texto original da pergunta\",\n" +
-            "      \"ok\": true/false,\n" +
-            "      \"feedback\": \"feedback breve sobre a qualidade ou sugestão de melhoria\"\n" +
-            "    }\n" +
-            "  ]\n" +
-            "}\n" +
-            "Não retorne nenhum texto fora do JSON.", questionList
-        );
-
-        ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
-                .addUserMessage(prompt)
-                .model(ChatModel.GPT_5_MINI)
-                .build();
-
-        String responseText = openAIClient.chat().completions().create(params)
-                .choices().stream()
-                .findFirst()
-                .flatMap(choice -> choice.message().content())
-                .orElse(null);
-
-        if (responseText == null) {
-            return java.util.Map.of("valid", true, "suggestions", java.util.List.of());
-        }
-
-        try {
-            // Clean potential markdown code block wrapper
-            String cleaned = responseText.trim();
-            if (cleaned.startsWith("```")) {
-                cleaned = cleaned.replaceFirst("```(?:json)?\\s*", "").replaceAll("\\s*```$", "");
-            }
-            return objectMapper.readValue(cleaned, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
-        } catch (Exception e) {
-            return java.util.Map.of("valid", true, "suggestions", java.util.List.of());
-        }
-    }
-
     public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, UUID clientId, String audioFilename, String audioUrl, UUID scriptId, Double creditsUsed, String executedBy) {
 
         String scriptText = scriptItems.stream()
                 .map(item -> String.format("Question: %s\nAnswer: %s", item.getQuestion(), item.getAnswer()))
                 .collect(Collectors.joining("\n\n"));
 
-        String prompt = String.format("Você é um avaliador rigoroso de conformidade contratual. Analise a transcrição com base no script fornecido em JSON. Para cada item do script, identifique a resposta presente na transcrição e compare com o campo correctAnswer. Defina o campo correct como true somente se a resposta encontrada for semanticamente equivalente, confirmativa ou compatível com a resposta correta esperada. Caso contrário, marque como false. No campo analysis, explique objetivamente o motivo da decisão, citando o trecho relevante da transcrição e comparando-o com a resposta esperada. Não diga que 'a transcrição contém a pergunta e a resposta' ou qualquer explicação óbvia. Explique exclusivamente o critério de validação usado (ex.: confirmação explícita, divergência de dados, ausência de resposta, inconsistência de valor, equivalência semântica). Retorne exclusivamente no formato JSON especificado, sem texto adicional.\n\nScript:\n%s\n\nTranscrição:\n%s", scriptText, transcription);
+        String prompt = String.format("Você é um avaliador rigoroso de conformidade contratual. Analise a transcrição com base no script fornecido. Para cada item do script, execute DUAS validações:\n\n" +
+                "1. VALIDAÇÃO DA PERGUNTA (questionAsked): Verifique se a pergunta do script foi de fato realizada no áudio/transcrição. A pergunta não precisa ser idêntica, mas deve ser semanticamente equivalente. Defina questionAsked como true se a pergunta (ou variação equivalente) aparece na transcrição. Se a pergunta não foi feita no áudio, defina questionAsked como false.\n\n" +
+                "2. VALIDAÇÃO DA RESPOSTA (correct): Identifique a resposta presente na transcrição e compare com o campo correctAnswer esperado. Defina correct como true somente se a resposta encontrada for semanticamente equivalente, confirmativa ou compatível com a resposta correta esperada. Se a pergunta não foi sequer feita (questionAsked=false), marque correct como false automaticamente.\n\n" +
+                "No campo analysis, explique objetivamente: (a) se a pergunta foi feita e cite o trecho relevante, (b) se a resposta confere e o critério de validação usado (confirmação explícita, divergência de dados, ausência de resposta, inconsistência de valor, equivalência semântica). Retorne exclusivamente no formato JSON especificado, sem texto adicional.\n\nScript:\n%s\n\nTranscrição:\n%s", scriptText, transcription);
 
 
         StructuredChatCompletionCreateParams<OpenAiAnalysisResponseDTO> params = ChatCompletionCreateParams.builder()

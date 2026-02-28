@@ -18,6 +18,7 @@ public class OpenAiAnalysisResponseDTO {
         private String question;
         private String answer;
         private boolean correct;
+        private boolean questionAsked;
         private String analysis;
     }
 }
