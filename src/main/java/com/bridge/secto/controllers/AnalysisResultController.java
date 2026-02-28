@@ -1,6 +1,7 @@
 package com.bridge.secto.controllers;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,7 @@ import com.bridge.secto.repositories.AnalysisResultRepository;
 import com.bridge.secto.services.AuthService;
 import com.bridge.secto.services.CreditService;
 import com.bridge.secto.services.OpenAIService;
+import com.bridge.secto.services.S3StorageService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -42,6 +44,7 @@ public class AnalysisResultController {
     private final ObjectMapper objectMapper;
     private final OpenAIService openAIService;
     private final CreditService creditService;
+    private final S3StorageService s3StorageService;
 
     @GetMapping
     @Operation(summary = "List analysis results by company, optionally filtered by client")
@@ -152,6 +155,32 @@ public class AnalysisResultController {
                 .orElseThrow(() -> new RuntimeException("Erro ao recuperar a análise re-gerada."));
 
         return ResponseEntity.ok(toDto(newResult));
+    }
+
+    @GetMapping("/{id}/download-url")
+    @Operation(summary = "Generate a temporary presigned URL for downloading the analysis audio")
+    public ResponseEntity<Map<String, String>> getAudioDownloadUrl(@PathVariable UUID id) {
+        UUID companyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
+
+        AnalysisResult result = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Analysis result not found"));
+
+        if (!result.getCompany().getId().equals(companyId)) {
+            throw new ResourceNotFoundException("Analysis result not found");
+        }
+
+        if (result.getAudioFilename() == null || result.getAudioFilename().isBlank()) {
+            throw new BusinessRuleException("Esta análise não possui áudio associado.");
+        }
+
+        String presignedUrl = s3StorageService.generatePresignedUrl(
+                result.getAudioFilename(),
+                java.time.Duration.ofMinutes(15)
+        );
+
+        return ResponseEntity.ok(Map.of("url", presignedUrl));
     }
 
     private AnalysisResultResponseDto toDto(AnalysisResult entity) {

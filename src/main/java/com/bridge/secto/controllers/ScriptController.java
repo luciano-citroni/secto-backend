@@ -1,6 +1,7 @@
 package com.bridge.secto.controllers;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,7 @@ import com.bridge.secto.exceptions.UnauthorizedActionException;
 import com.bridge.secto.repositories.ScriptRepository;
 import com.bridge.secto.repositories.ServiceTypeRepository;
 import com.bridge.secto.services.AuthService;
+import com.bridge.secto.services.OpenAIService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -36,6 +38,7 @@ public class ScriptController {
     private final ScriptRepository scriptRepository;
     private final ServiceTypeRepository serviceTypeRepository;
     private final AuthService authService;
+    private final OpenAIService openAIService;
 
     @Operation(summary = "Get All Scripts by Company")
     @ApiResponse(responseCode = "200", description = "Successful operation")
@@ -194,5 +197,18 @@ public class ScriptController {
         scriptRepository.save(script);
         
         return ResponseEntity.ok(mapToScriptDto(script));
+    }
+
+    @Operation(summary = "Validate Script Questions using AI")
+    @ApiResponse(responseCode = "200", description = "Validation result")
+    @PostMapping("/validate-questions")
+    public ResponseEntity<Map<String, Object>> validateQuestions(@RequestBody Map<String, List<String>> request) {
+        List<String> questions = request.get("questions");
+        if (questions == null || questions.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("valid", false, "suggestions", List.of()));
+        }
+
+        Map<String, Object> result = openAIService.validateScriptQuestions(questions);
+        return ResponseEntity.ok(result);
     }
 }

@@ -11,6 +11,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @Configuration
 public class S3Config {
@@ -39,5 +40,24 @@ public class S3Config {
                     .pathStyleAccessEnabled(true)
                     .build())
                 .build();
+    }
+
+    @Bean
+    public S3Presigner s3Presigner() {
+        var builder = S3Presigner.builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKey, secretKey)
+                ));
+
+        // Only override endpoint for non-AWS environments (MinIO, LocalStack, etc.)
+        if (!url.contains("amazonaws.com")) {
+            builder.endpointOverride(URI.create(url))
+                   .serviceConfiguration(S3Configuration.builder()
+                       .pathStyleAccessEnabled(true)
+                       .build());
+        }
+
+        return builder.build();
     }
 }

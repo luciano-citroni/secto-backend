@@ -44,6 +44,66 @@ public class OpenAIService {
     private final AuthService authService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Validates script questions using AI to check if they are clear, well-formed,
+     * and appropriate for voice analysis scripts.
+     *
+     * @param questions list of question strings to validate
+     * @return a map with "valid" (boolean), "suggestions" (list of per-question feedback)
+     */
+    public java.util.Map<String, Object> validateScriptQuestions(List<String> questions) {
+        String questionList = questions.stream()
+                .map(q -> "- " + q)
+                .collect(Collectors.joining("\n"));
+
+        String prompt = String.format(
+            "Você é um especialista em criação de scripts de atendimento por voz para análise de conformidade contratual. " +
+            "Avalie as seguintes perguntas de script e para cada uma determine se ela é:\n" +
+            "1. Clara e objetiva (pode ser respondida de forma verificável)\n" +
+            "2. Adequada para um script de atendimento telefônico\n" +
+            "3. Sem ambiguidades ou erros gramaticais graves\n\n" +
+            "Perguntas:\n%s\n\n" +
+            "Responda SOMENTE em formato JSON válido com esta estrutura exata:\n" +
+            "{\n" +
+            "  \"valid\": true/false (true se TODAS as perguntas são adequadas),\n" +
+            "  \"suggestions\": [\n" +
+            "    {\n" +
+            "      \"question\": \"texto original da pergunta\",\n" +
+            "      \"ok\": true/false,\n" +
+            "      \"feedback\": \"feedback breve sobre a qualidade ou sugestão de melhoria\"\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}\n" +
+            "Não retorne nenhum texto fora do JSON.", questionList
+        );
+
+        ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
+                .addUserMessage(prompt)
+                .model(ChatModel.GPT_5_MINI)
+                .build();
+
+        String responseText = openAIClient.chat().completions().create(params)
+                .choices().stream()
+                .findFirst()
+                .flatMap(choice -> choice.message().content())
+                .orElse(null);
+
+        if (responseText == null) {
+            return java.util.Map.of("valid", true, "suggestions", java.util.List.of());
+        }
+
+        try {
+            // Clean potential markdown code block wrapper
+            String cleaned = responseText.trim();
+            if (cleaned.startsWith("```")) {
+                cleaned = cleaned.replaceFirst("```(?:json)?\\s*", "").replaceAll("\\s*```$", "");
+            }
+            return objectMapper.readValue(cleaned, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+        } catch (Exception e) {
+            return java.util.Map.of("valid", true, "suggestions", java.util.List.of());
+        }
+    }
+
     public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, UUID clientId, String audioFilename, String audioUrl, UUID scriptId, Double creditsUsed, String executedBy) {
 
         String scriptText = scriptItems.stream()
