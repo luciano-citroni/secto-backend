@@ -1,6 +1,5 @@
 package com.bridge.secto.services;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -144,21 +143,41 @@ public class AuthService {
 
     public boolean hasRole(String role) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
-            // Verificar roles no realm_access
-            List<String> realmRoles = jwt.getClaimAsStringList("realm_access.roles");
-            if (realmRoles != null && realmRoles.contains(role)) {
-                return true;
-            }
-            
-            // Verificar roles no resource_access para o client específico
-            List<String> clientRoles = jwt.getClaimAsStringList("resource_access.secto-client.roles");
-            if (clientRoles != null && clientRoles.contains(role)) {
-                return true;
+
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
+            return false;
+        }
+
+        // Verificar realm roles
+        Object realmAccessObj = jwt.getClaim("realm_access");
+        if (realmAccessObj instanceof java.util.Map<?, ?> realmAccess) {
+            Object rolesObj = realmAccess.get("roles");
+            if (rolesObj instanceof java.util.List<?> roles) {
+                for (Object r : roles) {
+                    if (role.equals(r)) {
+                        return true;
+                    }
+                }
             }
         }
-        
+
+        // Verificar client roles em qualquer client
+        Object resourceAccessObj = jwt.getClaim("resource_access");
+        if (resourceAccessObj instanceof java.util.Map<?, ?> resources) {
+            for (Object resource : resources.values()) {
+                if (resource instanceof java.util.Map<?, ?> client) {
+                    Object rolesObj = client.get("roles");
+                    if (rolesObj instanceof java.util.List<?> roles) {
+                        for (Object r : roles) {
+                            if (role.equals(r)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return false;
     }
 
