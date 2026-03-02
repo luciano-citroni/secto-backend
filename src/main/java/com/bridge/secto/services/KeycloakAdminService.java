@@ -566,6 +566,39 @@ public class KeycloakAdminService {
     }
 
     /**
+     * Ativar um usuário no Keycloak (enabled = true)
+     */
+    public void enableUser(String userId) {
+        try {
+            String adminToken = getAdminToken();
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("enabled", true);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+            String updateUserUrl = String.format("%s/admin/realms/%s/users/%s",
+                    getNormalizedBaseUrl(), realm, userId);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    updateUserUrl, org.springframework.http.HttpMethod.PUT, request, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Falha ao ativar usuário: " + response.getStatusCode());
+            }
+
+            log.info("Usuário ativado com sucesso: {}", userId);
+        } catch (Exception e) {
+            log.error("Erro ao ativar usuário no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao ativar usuário: " + e.getMessage());
+        }
+    }
+
+    /**
      * Atualizar dados de um usuário no Keycloak (firstName, lastName, email)
      */
     public void updateUser(String userId, String firstName, String lastName, String email) {

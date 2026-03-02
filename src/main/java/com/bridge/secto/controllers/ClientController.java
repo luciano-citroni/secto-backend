@@ -46,13 +46,13 @@ public class ClientController {
     private final CompanyRepository companyRepository;
     private final AuthService authService;
 
-    @Operation(summary = "Listar clientes da empresa", description = "Retorna todos os clientes ativos da empresa autenticada")
+    @Operation(summary = "Listar clientes da empresa", description = "Retorna todos os clientes da empresa autenticada (ativos e inativos)")
     @ApiResponse(responseCode = "200", description = "Lista de clientes retornada com sucesso")
     @GetMapping
     public ResponseEntity<List<ClientResponseDto>> getClients() {
         UUID userCompanyId = authService.getCurrentCompanyId();
 
-        List<ClientResponseDto> dtos = clientRepository.findByCompanyIdAndStatusTrue(userCompanyId).stream()
+        List<ClientResponseDto> dtos = clientRepository.findByCompanyId(userCompanyId).stream()
             .map(this::mapToResponseDto)
             .collect(Collectors.toList());
         

@@ -108,6 +108,34 @@ public class CompanyUserController {
         return ResponseEntity.ok(Map.of("message", "Usuário desativado com sucesso"));
     }
 
+    @Operation(summary = "Ativar usuário da empresa",
+               description = "Ativa (enabled=true) um usuário da empresa no Keycloak. O usuário poderá fazer login novamente. Apenas administradores da empresa podem usar este endpoint.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Usuário ativado com sucesso"),
+        @ApiResponse(responseCode = "403", description = "Sem permissão para ativar este usuário"),
+        @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
+    })
+    @PutMapping("/{userId}/enable")
+    public ResponseEntity<?> enableUser(
+            @Parameter(description = "ID do usuário no Keycloak") @PathVariable String userId) {
+
+        // Apenas admin da empresa pode ativar usuários
+        if (!authService.isCompanyAdmin()) {
+            throw new UnauthorizedActionException("Apenas administradores da empresa podem ativar usuários");
+        }
+
+        UUID companyId = authService.getCurrentCompanyId();
+
+        // Verificar se o usuário alvo pertence à mesma empresa
+        if (!keycloakAdminService.isUserInCompany(userId, companyId)) {
+            throw new UnauthorizedActionException("Usuário não pertence à sua empresa");
+        }
+
+        keycloakAdminService.enableUser(userId);
+
+        return ResponseEntity.ok(Map.of("message", "Usuário ativado com sucesso"));
+    }
+
     @Operation(summary = "Resetar senha de outro usuário da empresa",
                description = "Permite que o administrador da empresa resete a senha de outro usuário. A senha pode ser temporária (o usuário será obrigado a trocar no próximo login).")
     @ApiResponses(value = {
