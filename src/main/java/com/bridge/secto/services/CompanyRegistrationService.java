@@ -11,6 +11,7 @@ import com.bridge.secto.dtos.CompanyRegistrationRequest;
 import com.bridge.secto.dtos.CompanyRegistrationResponse;
 import com.bridge.secto.entities.Company;
 import com.bridge.secto.entities.CompanyCredit;
+import com.bridge.secto.exceptions.BusinessRuleException;
 import com.bridge.secto.repositories.CompanyRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,8 @@ public class CompanyRegistrationService {
                 .message("Empresa criada com sucesso! Verifique seu email para ativação.")
                 .build();
                 
+        } catch (BusinessRuleException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Erro ao registrar empresa: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao registrar empresa: " + e.getMessage());
