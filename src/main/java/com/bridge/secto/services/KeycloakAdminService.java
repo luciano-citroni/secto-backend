@@ -15,7 +15,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+
+import com.bridge.secto.exceptions.BusinessRuleException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -111,7 +114,13 @@ public class KeycloakAdminService {
             }
             
             throw new RuntimeException("Falha ao criar usuário: " + response.getStatusCode());
-            
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.CONFLICT) {
+                throw new BusinessRuleException("Usuário com esse email ou nome de usuário já existe");
+            }
+            log.error("Erro ao criar usuário no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao criar usuário: " + e.getMessage());
         } catch (Exception e) {
             log.error("Erro ao criar usuário no Keycloak: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao criar usuário: " + e.getMessage());
@@ -168,6 +177,12 @@ public class KeycloakAdminService {
 
             throw new RuntimeException("Falha ao criar usuário: " + response.getStatusCode());
 
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.CONFLICT) {
+                throw new BusinessRuleException("Usuário com esse email ou nome de usuário já existe");
+            }
+            log.error("Erro ao criar usuário no Keycloak: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao criar usuário: " + e.getMessage());
         } catch (Exception e) {
             log.error("Erro ao criar usuário no Keycloak: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao criar usuário: " + e.getMessage());
