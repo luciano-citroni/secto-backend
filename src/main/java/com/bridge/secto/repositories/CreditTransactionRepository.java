@@ -34,4 +34,24 @@ public interface CreditTransactionRepository extends JpaRepository<CreditTransac
      */
     List<CreditTransaction> findByCompanyCreditIdAndAmountGreaterThanOrderByExpiresAtAsc(
             UUID companyCreditId, BigDecimal amountThreshold);
+
+    /**
+     * Find all transactions for a company credit within a date range, ordered by creation date desc.
+     */
+    List<CreditTransaction> findByCompanyCreditIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            UUID companyCreditId, Instant startDate, Instant endDate);
+
+    /**
+     * Sum of negative amounts (usage) in a period.
+     */
+    @Query("SELECT COALESCE(SUM(ct.amount), 0) FROM CreditTransaction ct " +
+           "WHERE ct.companyCredit.id = :ccId AND ct.amount < 0 AND ct.createdAt BETWEEN :start AND :end")
+    BigDecimal sumUsageInPeriod(@Param("ccId") UUID companyCreditId, @Param("start") Instant start, @Param("end") Instant end);
+
+    /**
+     * Sum of positive amounts (purchases) in a period.
+     */
+    @Query("SELECT COALESCE(SUM(ct.amount), 0) FROM CreditTransaction ct " +
+           "WHERE ct.companyCredit.id = :ccId AND ct.amount > 0 AND ct.createdAt BETWEEN :start AND :end")
+    BigDecimal sumPurchasesInPeriod(@Param("ccId") UUID companyCreditId, @Param("start") Instant start, @Param("end") Instant end);
 }

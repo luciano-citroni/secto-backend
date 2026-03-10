@@ -1,5 +1,6 @@
 package com.bridge.secto.repositories;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,4 +13,5 @@ import com.bridge.secto.entities.AnalysisResult;
 public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, UUID> {
     List<AnalysisResult> findByCompanyId(UUID companyId);
     List<AnalysisResult> findByCompanyIdAndClientId(UUID companyId, UUID clientId);
+    long countByCompanyIdAndCreatedAtBetween(UUID companyId, Instant start, Instant end);
 }
