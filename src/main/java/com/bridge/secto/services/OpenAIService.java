@@ -50,12 +50,22 @@ public class OpenAIService {
                 .collect(Collectors.joining("\n\n"));
 
         String prompt = String.format("Você é um avaliador rigoroso de conformidade contratual. Analise a transcrição com base no script fornecido. Para cada item do script, execute DUAS validações:\n\n" +
-                "1. VALIDAÇÃO DA PERGUNTA (questionAsked): Verifique se a pergunta do script foi de fato realizada no áudio/transcrição. A pergunta não precisa ser idêntica, mas deve ser semanticamente equivalente. Defina questionAsked como true se a pergunta (ou variação equivalente) aparece na transcrição. Se a pergunta não foi feita no áudio, defina questionAsked como false.\n\n" +
+                "1. VALIDAÇÃO DA PERGUNTA (questionAsked): Verifique se a pergunta do script foi de fato realizada no áudio/transcrição. A pergunta não precisa ser idêntica palavra por palavra, mas deve preservar INTEGRALMENTE o sentido original, incluindo todas as condições, valores, prazos e termos contratuais. Defina questionAsked como true SOMENTE se a pergunta na transcrição for semanticamente fiel ao script, sem alterações que modifiquem o significado. Se a pergunta não foi feita ou foi feita com alterações que mudam o sentido, defina questionAsked como false.\n\n" +
+                "ATENÇÃO — DIFERENÇAS SEMÂNTICAS QUE INVALIDAM A PERGUNTA:\n" +
+                "Trate qualquer modificação que altere o significado real da frase como ERRO, mesmo que pareça sutil. Exemplos críticos:\n" +
+                "- 'em 12 prestações' vs 'até 12 prestações' → significados DIFERENTES (valor fixo vs valor máximo).\n" +
+                "- '3 vezes' vs 'até 3 vezes' → significados DIFERENTES.\n" +
+                "- '30%%' vs '20%%' → valores DIFERENTES.\n" +
+                "- 'e' vs 'ou' ligando condições → lógica DIFERENTE.\n" +
+                "- 'será cobrado' vs 'poderá ser cobrado' → obrigatoriedade DIFERENTE.\n" +
+                "- 'após' vs 'antes de' → temporalidade DIFERENTE.\n" +
+                "- Adição ou remoção de palavras como 'até', 'no mínimo', 'no máximo', 'aproximadamente', 'a partir de' que alteram o escopo quantitativo ou temporal.\n" +
+                "Em contexto contratual, cada palavra que qualifica valores, prazos, condições ou obrigações é essencial. Palavras como 'até', 'a partir de', 'no mínimo', 'no máximo' alteram fundamentalmente o sentido jurídico e devem ser tratadas com rigor absoluto.\n\n" +
                 "2. VALIDAÇÃO DA RESPOSTA (correct): Identifique a resposta presente na transcrição e compare com o campo correctAnswer esperado. Defina correct como true somente se a resposta encontrada for semanticamente equivalente, confirmativa ou compatível com a resposta correta esperada. Se a pergunta não foi sequer feita (questionAsked=false), marque correct como false automaticamente.\n\n" +
                 "REGRA ESPECIAL PARA RESPOSTAS 'Sim' E 'Não':\n" +
                 "- Quando o campo correctAnswer for 'Sim', considere como corretas respostas afirmativas como: sim, positivo, concordo, correto, isso, exatamente, com certeza, claro, isso mesmo, pode ser, afirmativo, e quaisquer expressões semanticamente equivalentes a uma confirmação ou afirmação positiva em relação à pergunta feita.\n" +
                 "- Quando o campo correctAnswer for 'Não', considere como corretas respostas negativas como: não, negativo, discordo, incorreto, de forma nenhuma, nunca, nada disso, nem pensar, e quaisquer expressões semanticamente equivalentes a uma negação ou resposta negativa em relação à pergunta feita.\n\n" +
-                "No campo analysis, explique objetivamente: (a) se a pergunta foi feita e cite o trecho relevante, (b) se a resposta confere e o critério de validação usado (confirmação explícita, divergência de dados, ausência de resposta, inconsistência de valor, equivalência semântica). Retorne exclusivamente no formato JSON especificado, sem texto adicional.\n\nScript:\n%s\n\nTranscrição:\n%s", scriptText, transcription);
+                "No campo analysis, explique objetivamente: (a) se a pergunta foi feita e cite o trecho relevante — se houve divergência semântica, destaque exatamente qual termo foi alterado e por que isso muda o significado (ex: '\"em 12 prestações\" foi dito como \"até 12 prestações\", o que altera o sentido de valor fixo para valor máximo'), (b) se a resposta confere e o critério de validação usado (confirmação explícita, divergência de dados, ausência de resposta, inconsistência de valor, equivalência semântica). Retorne exclusivamente no formato JSON especificado, sem texto adicional.\n\nScript:\n%s\n\nTranscrição:\n%s", scriptText, transcription);
 
 
         StructuredChatCompletionCreateParams<OpenAiAnalysisResponseDTO> params = ChatCompletionCreateParams.builder()
