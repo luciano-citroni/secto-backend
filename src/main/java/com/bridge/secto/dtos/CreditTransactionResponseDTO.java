@@ -96,4 +96,12 @@ public class CreditTransactionResponseDTO {
         allowableValues = {"day", "week", "month", "year"}
     )
     private String intervalType;
+
+    @Schema(
+        description = "ID do resultado de análise que gerou esta transação de débito. "
+            + "Presente apenas em transações de uso (sourceType = USAGE).",
+        example = "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+        nullable = true
+    )
+    private UUID analysisResultId;
 }

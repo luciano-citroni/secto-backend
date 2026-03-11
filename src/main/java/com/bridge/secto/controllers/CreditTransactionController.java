@@ -115,6 +115,7 @@ public class CreditTransactionController {
         dto.setRemainingAmount(transaction.getRemainingAmount());
         dto.setSourceType(transaction.getSourceType());
         dto.setIntervalType(transaction.getIntervalType());
+        dto.setAnalysisResultId(transaction.getAnalysisResultId());
         return dto;
     }
     

@@ -117,6 +117,7 @@ public class DashboardService {
         dto.setRemainingAmount(ct.getRemainingAmount());
         dto.setSourceType(ct.getSourceType());
         dto.setIntervalType(ct.getIntervalType());
+        dto.setAnalysisResultId(ct.getAnalysisResultId());
         return dto;
     }
 }

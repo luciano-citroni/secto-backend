@@ -43,7 +43,9 @@ public class OpenAIService {
     private final AuthService authService;
     private final ObjectMapper objectMapper;
 
-    public OpenAiAnalysisResponseDTO compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, UUID clientId, String audioFilename, String audioUrl, UUID scriptId, Double creditsUsed, String executedBy) {
+    public record AnalysisProcessingResult(OpenAiAnalysisResponseDTO response, UUID analysisResultId) {}
+
+    public AnalysisProcessingResult compareTranscribedTextAndScript(String transcription, List<ScriptItemInputDto> scriptItems, UUID clientId, String audioFilename, String audioUrl, UUID scriptId, Double creditsUsed, String executedBy) {
 
         String scriptText = scriptItems.stream()
                 .map(item -> String.format("Question: %s\nAnswer: %s", item.getQuestion(), item.getAnswer()))
@@ -121,15 +123,13 @@ public class OpenAIService {
                 }
                 
                 analysisResultRepository.save(result);
+                return new AnalysisProcessingResult(response, result.getId());
             } catch (Exception e) {
-                // Log error but don't fail the request? Or fail?
-                // For now, just print stack trace or let it bubble if critical.
-                // Better to log and continue or throw.
                 e.printStackTrace(); 
             }
         }
 
-        return response;
+        return new AnalysisProcessingResult(response, null);
     }
 
     public String transcribeAudio(MultipartFile audioFile) {

@@ -86,7 +86,7 @@ public class OpenAIController {
             throw new BusinessRuleException("Transcription or audio file is required.");
         }
         
-        OpenAiAnalysisResponseDTO response = openAIService.compareTranscribedTextAndScript(
+        OpenAIService.AnalysisProcessingResult result = openAIService.compareTranscribedTextAndScript(
             transcription, 
             request.getScriptItems(), 
             request.getClientId(),
@@ -101,14 +101,12 @@ public class OpenAIController {
         if (audioDurationInSeconds != null && audioDurationInSeconds > 0) {
             String clientNameForCredits = null;
             if (request.getClientId() != null) {
-                // Buscar o nome do cliente para o registro de crédito (se necessário manter compatibilidade)
-                // TODO: Considerar refatorar CreditService para usar clientId em vez de clientName
                 clientNameForCredits = "Cliente ID: " + request.getClientId();
             }
-            creditService.debitCreditsForAnalysis(clientNameForCredits, audioDurationInSeconds);
+            creditService.debitCreditsForAnalysis(clientNameForCredits, audioDurationInSeconds, result.analysisResultId());
         }
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(result.response());
     }
 
     @PostMapping(value = "/calculate-credits", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

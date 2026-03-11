@@ -76,6 +76,11 @@ public class CreditService {
      */
     @Transactional
     public void debitCredits(UUID companyId, double creditsToDebit, String description) {
+        debitCredits(companyId, creditsToDebit, description, null);
+    }
+
+    @Transactional
+    public void debitCredits(UUID companyId, double creditsToDebit, String description, UUID analysisResultId) {
         CompanyCredit companyCredit = getCompanyCredit(companyId);
 
         // Recalcular saldo com base em lotes válidos
@@ -114,6 +119,7 @@ public class CreditService {
         transaction.setCompanyCredit(companyCredit);
         transaction.setRemainingAmount(BigDecimal.ZERO);
         transaction.setSourceType("USAGE");
+        transaction.setAnalysisResultId(analysisResultId);
 
         // Registrar o usuário responsável pela transação
         try {
@@ -138,7 +144,7 @@ public class CreditService {
      * Desconta créditos baseado na duração do áudio e informações da análise
      */
     @Transactional
-    public void debitCreditsForAnalysis(String clientName, Double audioDurationInSeconds) {
+    public void debitCreditsForAnalysis(String clientName, Double audioDurationInSeconds, UUID analysisResultId) {
         UUID companyId = authService.getCurrentCompanyId();
         
         if (audioDurationInSeconds == null || audioDurationInSeconds <= 0) {
@@ -150,7 +156,7 @@ public class CreditService {
         String description = String.format("Análise de áudio - Cliente: %s (%.1fs)", 
                 clientName, audioDurationInSeconds);
         
-        debitCredits(companyId, creditsToDebit, description);
+        debitCredits(companyId, creditsToDebit, description, analysisResultId);
     }
 
     /**

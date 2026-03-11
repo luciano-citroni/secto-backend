@@ -2,6 +2,7 @@ package com.bridge.secto.entities;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -45,4 +46,7 @@ public class CreditTransaction extends BaseEntity {
 
     @Column(name = "interval_type", length = 20)
     private String intervalType;
+
+    @Column(name = "analysis_result_id")
+    private UUID analysisResultId;
 }

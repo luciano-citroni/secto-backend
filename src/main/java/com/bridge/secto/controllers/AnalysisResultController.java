@@ -127,7 +127,7 @@ public class AnalysisResultController {
         String executedBy = authService.getCurrentUser().map(AuthService.UserInfo::getName).orElse(null);
 
         // Re-run the AI analysis with the same data
-        openAIService.compareTranscribedTextAndScript(
+        OpenAIService.AnalysisProcessingResult processingResult = openAIService.compareTranscribedTextAndScript(
                 transcription,
                 scriptItems,
                 clientId,
@@ -144,7 +144,8 @@ public class AnalysisResultController {
                     ? original.getClient().getFullName()
                     : "Cliente ID: " + clientId;
             creditService.debitCredits(companyId, creditsToCharge,
-                    String.format("Re-análise de áudio - Cliente: %s", clientName));
+                    String.format("Re-análise de áudio - Cliente: %s", clientName),
+                    processingResult.analysisResultId());
         }
 
         // Find the newly created AnalysisResult (the last one created by OpenAIService)
