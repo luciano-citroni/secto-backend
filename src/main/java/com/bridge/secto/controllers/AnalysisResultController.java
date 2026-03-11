@@ -140,6 +140,10 @@ public class AnalysisResultController {
 
         // Debit credits after successful analysis
         if (creditsToCharge != null && creditsToCharge > 0) {
+            if (processingResult.analysisResultId() == null) {
+                throw new BusinessRuleException("Não foi possível registrar a análise re-gerada para vincular a cobrança de créditos.");
+            }
+
             String clientName = original.getClient() != null
                     ? original.getClient().getFullName()
                     : "Cliente ID: " + clientId;

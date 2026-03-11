@@ -146,6 +146,10 @@ public class CreditService {
     @Transactional
     public void debitCreditsForAnalysis(String clientName, Double audioDurationInSeconds, UUID analysisResultId) {
         UUID companyId = authService.getCurrentCompanyId();
+
+        if (analysisResultId == null) {
+            throw new BusinessRuleException("Não foi possível vincular o débito à análise executada.");
+        }
         
         if (audioDurationInSeconds == null || audioDurationInSeconds <= 0) {
             log.info("Análise sem arquivo de áudio, não há cobrança de créditos");

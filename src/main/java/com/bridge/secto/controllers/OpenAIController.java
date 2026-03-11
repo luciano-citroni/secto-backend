@@ -99,6 +99,10 @@ public class OpenAIController {
 
         // Descontar créditos após análise bem-sucedida
         if (audioDurationInSeconds != null && audioDurationInSeconds > 0) {
+            if (result.analysisResultId() == null) {
+                throw new BusinessRuleException("Não foi possível registrar o resultado da análise para vincular a cobrança de créditos.");
+            }
+
             String clientNameForCredits = null;
             if (request.getClientId() != null) {
                 clientNameForCredits = "Cliente ID: " + request.getClientId();
