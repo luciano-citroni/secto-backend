@@ -165,6 +165,10 @@ public class AnalysisResultController {
     @GetMapping("/{id}/download-url")
     @Operation(summary = "Generate a temporary presigned URL for downloading the analysis audio")
     public ResponseEntity<Map<String, String>> getAudioDownloadUrl(@PathVariable UUID id) {
+        if (!authService.isCompanyAdmin()) {
+            throw new UnauthorizedActionException("Apenas company-admin pode baixar o áudio da análise.");
+        }
+
         UUID companyId = authService.getCurrentUser()
             .map(AuthService.UserInfo::getCompanyId)
             .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));

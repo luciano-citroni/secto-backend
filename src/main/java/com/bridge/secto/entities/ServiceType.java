@@ -30,7 +30,7 @@ public class ServiceType extends BaseEntity {
         example = "Atendimento ao Cliente",
         required = true
     )
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     @Schema(
