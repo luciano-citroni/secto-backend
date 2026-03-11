@@ -22,6 +22,7 @@ import com.bridge.secto.repositories.CompanyRepository;
 import com.bridge.secto.repositories.CreditTransactionRepository;
 import com.stripe.Stripe;
 import com.stripe.exception.SignatureVerificationException;
+import com.stripe.model.Customer;
 import com.stripe.model.Event;
 import com.stripe.model.Invoice;
 import com.stripe.model.Price;
@@ -30,6 +31,8 @@ import com.stripe.model.Subscription;
 import com.stripe.model.SubscriptionCollection;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
+import com.stripe.param.CustomerCreateParams;
+import com.stripe.param.CustomerUpdateParams;
 import com.stripe.param.PriceListParams;
 import com.stripe.param.ProductListParams;
 import com.stripe.param.SubscriptionCancelParams;
@@ -150,7 +153,10 @@ public class StripeService {
      * If the company already has an active subscription and is buying a recurring plan,
      * the existing subscription is cancelled immediately (credits from old plan keep their original expiration).
      */
-    public String createCheckoutSession(String priceId, UUID companyId) throws Exception {
+    public String createCheckoutSession(String priceId, UUID companyId, String companyName) throws Exception {
+        // Ensure Stripe Customer exists with company name
+        String stripeCustomerId = getOrCreateStripeCustomer(companyId, companyName);
+
         Price price = Price.retrieve(priceId);
         boolean isRecurring = "recurring".equals(price.getType());
 
@@ -181,6 +187,7 @@ public class StripeService {
 
         SessionCreateParams.Builder builder = SessionCreateParams.builder()
                 .setMode(mode)
+                .setCustomer(stripeCustomerId)
                 .setSuccessUrl(successUrl)
                 .setCancelUrl(cancelUrl)
                 .addLineItem(SessionCreateParams.LineItem.builder()
@@ -619,6 +626,41 @@ public class StripeService {
             sub.cancel(SubscriptionCancelParams.builder().build());
             log.info("Cancelled subscription {} for company {}", sub.getId(), companyId);
         }
+    }
+
+    /**
+     * Get or create a Stripe Customer for the given company.
+     * If the company already has a stripeCustomerId, updates the name and returns it.
+     * Otherwise, creates a new Customer in Stripe, saves the ID on the company, and returns it.
+     */
+    private String getOrCreateStripeCustomer(UUID companyId, String companyName) throws Exception {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
+
+        String existingCustomerId = company.getStripeCustomerId();
+
+        if (existingCustomerId != null && !existingCustomerId.isBlank()) {
+            // Update the name on the existing customer to keep it in sync
+            Customer existing = Customer.retrieve(existingCustomerId);
+            if (existing != null && !existing.getDeleted()) {
+                existing.update(CustomerUpdateParams.builder()
+                        .setName(companyName)
+                        .build());
+                return existingCustomerId;
+            }
+        }
+
+        // Create a new Stripe Customer
+        Customer customer = Customer.create(CustomerCreateParams.builder()
+                .setName(companyName)
+                .putMetadata("companyId", companyId.toString())
+                .build());
+
+        company.setStripeCustomerId(customer.getId());
+        companyRepository.save(company);
+        log.info("Created Stripe customer {} for company {} ({})", customer.getId(), companyId, companyName);
+
+        return customer.getId();
     }
 
     private void addCredits(UUID companyId, BigDecimal amount, String stripeSessionId,

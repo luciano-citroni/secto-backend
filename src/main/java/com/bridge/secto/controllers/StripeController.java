@@ -67,7 +67,7 @@ public class StripeController {
             .orElseThrow(() -> new ResourceNotFoundException("Company not found for current user"));
         
         try {
-            String url = stripeService.createCheckoutSession(request.getPriceId(), company.getId());
+            String url = stripeService.createCheckoutSession(request.getPriceId(), company.getId(), company.getName());
             return ResponseEntity.ok(Map.of("url", url));
         } catch (Exception e) {
             throw new BusinessRuleException(e.getMessage());
