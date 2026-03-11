@@ -642,7 +642,7 @@ public class StripeService {
         if (existingCustomerId != null && !existingCustomerId.isBlank()) {
             // Update the name on the existing customer to keep it in sync
             Customer existing = Customer.retrieve(existingCustomerId);
-            if (existing != null && !existing.getDeleted()) {
+            if (existing != null && !Boolean.TRUE.equals(existing.getDeleted())) {
                 existing.update(CustomerUpdateParams.builder()
                         .setName(companyName)
                         .build());
