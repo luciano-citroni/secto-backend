@@ -145,7 +145,7 @@ public class OpenAIService {
 
             TranscriptionCreateParams params = TranscriptionCreateParams.builder()
                 .file(tempFile)
-                .model(AudioModel.WHISPER_1)
+                .model(AudioModel.GPT_4O_TRANSCRIBE)
                 .build();
 
             String transcription = openAIClient.audio().transcriptions().create(params).asTranscription().text();
