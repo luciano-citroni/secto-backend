@@ -73,7 +73,7 @@ public class OpenAIService {
 
         StructuredChatCompletionCreateParams<OpenAiAnalysisResponseDTO> params = ChatCompletionCreateParams.builder()
             .addUserMessage(prompt)
-            .model(ChatModel.GPT_5_MINI)
+            .model(ChatModel.GPT_5)
             .responseFormat(OpenAiAnalysisResponseDTO.class)
             .build();
 
