@@ -73,6 +73,7 @@ public class S3StorageService {
                 extension = objectKey.substring(objectKey.lastIndexOf("."));
             }
             java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("s3-download", extension);
+            java.nio.file.Files.delete(tempFile);
             s3Client.getObject(
                     GetObjectRequest.builder()
                             .bucket(bucketName)
