@@ -12,6 +12,7 @@ import com.bridge.secto.dtos.FileUploadResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -62,6 +63,27 @@ public class S3StorageService {
         } catch (Exception e) {
             log.error("Error uploading file to S3", e);
             throw new RuntimeException("Error uploading file to S3", e);
+        }
+    }
+
+    public java.nio.file.Path downloadToTempFile(String objectKey) {
+        try {
+            String extension = ".tmp";
+            if (objectKey.contains(".")) {
+                extension = objectKey.substring(objectKey.lastIndexOf("."));
+            }
+            java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("s3-download", extension);
+            s3Client.getObject(
+                    GetObjectRequest.builder()
+                            .bucket(bucketName)
+                            .key(objectKey)
+                            .build(),
+                    ResponseTransformer.toFile(tempFile)
+            );
+            return tempFile;
+        } catch (Exception e) {
+            log.error("Error downloading file from S3: {}", objectKey, e);
+            throw new RuntimeException("Error downloading file from S3", e);
         }
     }
 

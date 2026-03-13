@@ -143,12 +143,7 @@ public class OpenAIService {
             Path tempFile = Files.createTempFile("audio", extension);
             Files.copy(audioFile.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
 
-            TranscriptionCreateParams params = TranscriptionCreateParams.builder()
-                .file(tempFile)
-                .model(AudioModel.GPT_4O_TRANSCRIBE)
-                .build();
-
-            String transcription = openAIClient.audio().transcriptions().create(params).asTranscription().text();
+            String transcription = transcribeAudioFromPath(tempFile);
             
             Files.deleteIfExists(tempFile);
             
@@ -156,6 +151,15 @@ public class OpenAIService {
         } catch (IOException e) {
             throw new RuntimeException("Failed to process audio file", e);
         }
+    }
+
+    public String transcribeAudioFromPath(Path audioPath) {
+        TranscriptionCreateParams params = TranscriptionCreateParams.builder()
+            .file(audioPath)
+            .model(AudioModel.GPT_4O_TRANSCRIBE)
+            .build();
+
+        return openAIClient.audio().transcriptions().create(params).asTranscription().text();
     }
     
 }

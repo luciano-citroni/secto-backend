@@ -117,16 +117,28 @@ public class AnalysisResultController {
             }
         }
 
-        String transcription = original.getTranscription();
-        if (transcription == null || transcription.isBlank()) {
-            throw new BusinessRuleException("A análise original não possui transcrição para re-gerar.");
+        String transcription;
+        String audioFilename = original.getAudioFilename();
+        if (audioFilename != null && !audioFilename.isBlank()) {
+            // Re-transcribe from the original audio stored in S3
+            java.nio.file.Path tempAudioFile = s3StorageService.downloadToTempFile(audioFilename);
+            try {
+                transcription = openAIService.transcribeAudioFromPath(tempAudioFile);
+            } finally {
+                try { java.nio.file.Files.deleteIfExists(tempAudioFile); } catch (Exception ignored) {}
+            }
+        } else {
+            transcription = original.getTranscription();
+            if (transcription == null || transcription.isBlank()) {
+                throw new BusinessRuleException("A análise original não possui áudio nem transcrição para re-gerar.");
+            }
         }
 
         UUID clientId = original.getClient() != null ? original.getClient().getId() : null;
         UUID scriptId = original.getScript() != null ? original.getScript().getId() : null;
         String executedBy = authService.getCurrentUser().map(AuthService.UserInfo::getName).orElse(null);
 
-        // Re-run the AI analysis with the same data
+        // Re-run the AI analysis with the new transcription
         OpenAIService.AnalysisProcessingResult processingResult = openAIService.compareTranscribedTextAndScript(
                 transcription,
                 scriptItems,
