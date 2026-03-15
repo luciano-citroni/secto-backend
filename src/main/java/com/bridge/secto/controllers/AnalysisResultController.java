@@ -1,5 +1,6 @@
 package com.bridge.secto.controllers;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -7,14 +8,21 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.bridge.secto.dtos.AdminQuestionOverrideRequestDto;
 import com.bridge.secto.dtos.AnalysisResultResponseDto;
 import com.bridge.secto.dtos.ScriptItemInputDto;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import jakarta.validation.Valid;
 import com.bridge.secto.entities.AnalysisResult;
 import com.bridge.secto.exceptions.BusinessRuleException;
 import com.bridge.secto.exceptions.ResourceNotFoundException;
@@ -172,6 +180,103 @@ public class AnalysisResultController {
                 .orElseThrow(() -> new RuntimeException("Erro ao recuperar a análise re-gerada."));
 
         return ResponseEntity.ok(toDto(newResult));
+    }
+
+    @PatchMapping("/{id}/questions/override")
+    @Operation(summary = "Admin override of a question's correct/questionAsked result")
+    public ResponseEntity<AnalysisResultResponseDto> overrideQuestion(
+            @PathVariable UUID id,
+            @Valid @RequestBody AdminQuestionOverrideRequestDto request) {
+
+        if (!authService.isCompanyAdmin()) {
+            throw new UnauthorizedActionException("Apenas company-admin pode corrigir questões da análise.");
+        }
+
+        UUID companyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
+
+        AnalysisResult result = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Analysis result not found"));
+
+        if (!result.getCompany().getId().equals(companyId)) {
+            throw new ResourceNotFoundException("Analysis result not found");
+        }
+
+        if (result.getAiOutputJson() == null || result.getAiOutputJson().isBlank()) {
+            throw new BusinessRuleException("Esta análise não possui resultado de IA para corrigir.");
+        }
+
+        try {
+            JsonNode aiOutputNode = objectMapper.readTree(result.getAiOutputJson());
+            JsonNode outputArray = aiOutputNode.get("output");
+
+            if (outputArray == null || !outputArray.isArray()) {
+                throw new BusinessRuleException("Formato do resultado de IA inválido.");
+            }
+
+            int idx = request.getQuestionIndex();
+            if (idx < 0 || idx >= outputArray.size()) {
+                throw new BusinessRuleException(
+                        "Índice de questão inválido. Deve ser entre 0 e " + (outputArray.size() - 1) + ".");
+            }
+
+            ObjectNode questionNode = (ObjectNode) outputArray.get(idx);
+
+            String adminName = authService.getCurrentUser()
+                    .map(AuthService.UserInfo::getName)
+                    .orElse("Admin");
+
+            if (request.getCorrect() == null && request.getQuestionAsked() == null) {
+                // Remove override
+                questionNode.remove("adminOverride");
+            } else {
+                ObjectNode overrideNode;
+                if (questionNode.has("adminOverride") && questionNode.get("adminOverride").isObject()) {
+                    overrideNode = (ObjectNode) questionNode.get("adminOverride");
+                } else {
+                    overrideNode = objectMapper.createObjectNode();
+                }
+
+                if (request.getCorrect() != null) {
+                    overrideNode.put("correct", request.getCorrect());
+                }
+                if (request.getQuestionAsked() != null) {
+                    overrideNode.put("questionAsked", request.getQuestionAsked());
+                }
+                overrideNode.put("overriddenBy", adminName);
+                overrideNode.put("overriddenAt", Instant.now().toString());
+
+                questionNode.set("adminOverride", overrideNode);
+            }
+
+            // Recalculate approved: all questions must be correct (using override if present)
+            boolean allCorrect = true;
+            for (JsonNode q : outputArray) {
+                boolean effectiveCorrect;
+                if (q.has("adminOverride") && q.get("adminOverride").has("correct")) {
+                    effectiveCorrect = q.get("adminOverride").get("correct").asBoolean();
+                } else {
+                    effectiveCorrect = q.has("correct") && q.get("correct").asBoolean();
+                }
+                if (!effectiveCorrect) {
+                    allCorrect = false;
+                    break;
+                }
+            }
+
+            result.setAiOutputJson(objectMapper.writeValueAsString(aiOutputNode));
+            result.setApproved(allCorrect);
+            repository.save(result);
+
+            return ResponseEntity.ok(toDto(result));
+
+        } catch (BusinessRuleException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Erro ao aplicar override na análise {}: {}", id, e.getMessage());
+            throw new BusinessRuleException("Erro ao aplicar correção na questão.");
+        }
     }
 
     @GetMapping("/{id}/download-url")
