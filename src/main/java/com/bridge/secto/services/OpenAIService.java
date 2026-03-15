@@ -162,10 +162,19 @@ public class OpenAIService {
         }
     }
 
+    private static final String TRANSCRIPTION_PROMPT =
+        "Transcrição de ligação de telemarketing em português brasileiro. " +
+        "Vocabulário esperado: contrato, cláusula, prestação, parcela, empréstimo, consignado, " +
+        "taxa de juros, CET, IOF, seguro, benefício, aposentadoria, INSS, margem, débito, " +
+        "vencimento, carência, portabilidade, refinanciamento, amortização, saldo devedor, " +
+        "CPF, RG, conta corrente, poupança, TED, PIX, boleto, confirmação, cancelamento.";
+
     public String transcribeAudioFromPath(Path audioPath) {
         TranscriptionCreateParams params = TranscriptionCreateParams.builder()
             .file(audioPath)
             .model(AudioModel.GPT_4O_TRANSCRIBE)
+            .language("pt")
+            .prompt(TRANSCRIPTION_PROMPT)
             .build();
 
         return openAIClient.audio().transcriptions().create(params).asTranscription().text();
