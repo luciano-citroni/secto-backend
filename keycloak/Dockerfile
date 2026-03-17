@@ -10,7 +10,9 @@ ENV KC_FEATURES=declarative-user-profile
 
 COPY themes/sectotech /opt/keycloak/themes/sectotech
 
+USER root
 RUN sed -i "s|__FRONTEND_URL__|${FRONTEND_URL}|g" /opt/keycloak/themes/sectotech/login/theme.properties
+USER keycloak
 
 RUN /opt/keycloak/bin/kc.sh build
 

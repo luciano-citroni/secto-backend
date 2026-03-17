@@ -13,6 +13,7 @@
     </#if>
 
     <title>${msg("loginTitle",(realm.displayName!'SECTOTECH'))}</title>
+    <link rel="icon" href="${url.resourcesPath}/img/favicon.ico" type="image/x-icon" />
 
     <#if properties.stylesCommon?has_content>
         <#list properties.stylesCommon?split(' ') as style>
@@ -44,7 +45,7 @@
 
             <!-- Logo -->
             <div class="login-header">
-                <img src="${url.resourcesPath}/img/secto-logo-branca.png" alt="${realm.displayName!'SECTOTECH'}" class="login-logo" />
+                <img src="${url.resourcesPath}/img/ocrsolution-logo.png" alt="OCR Solution" class="login-logo" />
             </div>
 
             <!-- Título da página -->
