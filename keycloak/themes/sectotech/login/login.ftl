@@ -100,7 +100,9 @@
                 var passwordInput = document.getElementById('password');
 
                 // Keycloak default: letters, numbers, dot, hyphen, underscore
+                /*
                 var usernameRegex = /^[a-zA-Z0-9._\-]+$/;
+                */
 
                 function removeValidationError(input) {
                     var existing = input.parentNode.querySelector('.client-validation-error');
@@ -123,6 +125,7 @@
                     input.parentNode.appendChild(span);
                 }
 
+                /*
                 function validateUsername(value) {
                     if (!value || value.trim().length === 0) {
                         return 'O campo de usuário é obrigatório.';
@@ -138,6 +141,7 @@
                     }
                     return null;
                 }
+                */
 
                 function validatePassword(value) {
                     if (!value || value.length === 0) {
@@ -147,6 +151,7 @@
                 }
 
                 // Real-time validation on input
+                /*
                 usernameInput.addEventListener('input', function() {
                     var value = this.value;
                     if (value.length > 0) {
@@ -170,6 +175,7 @@
                         removeValidationError(this);
                     }
                 });
+                */
 
                 passwordInput.addEventListener('blur', function() {
                     var error = validatePassword(this.value);
@@ -182,16 +188,18 @@
 
                 // Form submit validation
                 form.addEventListener('submit', function(e) {
-                    var usernameError = validateUsername(usernameInput.value);
+                    // var usernameError = validateUsername(usernameInput.value);
                     var passwordError = validatePassword(passwordInput.value);
                     var hasError = false;
 
+                    /*
                     if (usernameError) {
                         showValidationError(usernameInput, usernameError);
                         hasError = true;
                     } else {
                         removeValidationError(usernameInput);
                     }
+                    */
 
                     if (passwordError) {
                         showValidationError(passwordInput, passwordError);
@@ -202,12 +210,7 @@
 
                     if (hasError) {
                         e.preventDefault();
-                        // Focus first invalid field
-                        if (usernameError) {
-                            usernameInput.focus();
-                        } else {
-                            passwordInput.focus();
-                        }
+                        passwordInput.focus();
                     }
                 });
             })();
