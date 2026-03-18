@@ -99,10 +99,8 @@
                 var usernameInput = document.getElementById('username');
                 var passwordInput = document.getElementById('password');
 
-                // Keycloak default: letters, numbers, dot, hyphen, underscore, @
-                var usernameRegex = /^[a-zA-Z0-9._\-@]+$/;
-                // Email regex for when input looks like an email
-                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                // Keycloak default: letters, numbers, dot, hyphen, underscore
+                var usernameRegex = /^[a-zA-Z0-9._\-]+$/;
 
                 function removeValidationError(input) {
                     var existing = input.parentNode.querySelector('.client-validation-error');
@@ -132,13 +130,6 @@
                     if (/\s/.test(value)) {
                         return 'O nome de usuário não pode conter espaços.';
                     }
-                    // If it contains @, validate as email
-                    if (value.indexOf('@') !== -1) {
-                        if (!emailRegex.test(value)) {
-                            return 'Formato de e-mail inválido.';
-                        }
-                        return null;
-                    }
                     if (!usernameRegex.test(value)) {
                         return 'O nome de usuário só pode conter letras, números, ponto (.), hífen (-) e underline (_).';
                     }
@@ -160,8 +151,8 @@
                     var char = String.fromCharCode(e.which || e.keyCode);
                     // Allow control keys
                     if (e.ctrlKey || e.metaKey || e.which < 32) return;
-                    // Block spaces
-                    if (char === ' ') {
+                    // Only allow letters, numbers, dot, hyphen, underscore
+                    if (!/[a-zA-Z0-9._\-]/.test(char)) {
                         e.preventDefault();
                         return;
                     }
@@ -170,8 +161,8 @@
                 // Block paste of invalid content for username
                 usernameInput.addEventListener('paste', function(e) {
                     var pasted = (e.clipboardData || window.clipboardData).getData('text');
-                    // Remove spaces from pasted content
-                    var cleaned = pasted.replace(/\s/g, '');
+                    // Remove all invalid characters from pasted content
+                    var cleaned = pasted.replace(/[^a-zA-Z0-9._\-]/g, '');
                     if (cleaned !== pasted) {
                         e.preventDefault();
                         // Insert cleaned version

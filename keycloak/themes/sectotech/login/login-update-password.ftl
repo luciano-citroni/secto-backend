@@ -56,6 +56,104 @@
                 </#if>
             </div>
         </form>
+
+        <script>
+        (function() {
+            var form = document.getElementById('kc-passwd-update-form');
+            var passwordNewInput = document.getElementById('password-new');
+            var passwordConfirmInput = document.getElementById('password-confirm');
+
+            function removeValidationError(input) {
+                var existing = input.parentNode.querySelector('.client-validation-error');
+                if (existing) existing.remove();
+                input.setAttribute('aria-invalid', 'false');
+                input.style.borderColor = '';
+            }
+
+            function showValidationError(input, message) {
+                removeValidationError(input);
+                input.setAttribute('aria-invalid', 'true');
+                input.style.borderColor = '#ef4444';
+                var span = document.createElement('span');
+                span.className = 'alert alert-error client-validation-error';
+                span.style.marginTop = '0.25rem';
+                span.style.display = 'block';
+                span.style.padding = '0.5rem 0.75rem';
+                span.style.fontSize = '0.8rem';
+                span.textContent = message;
+                input.parentNode.appendChild(span);
+            }
+
+            function validatePassword(value) {
+                if (!value || value.length === 0) return 'A nova senha é obrigatória.';
+                if (value.length < 8) return 'A senha deve ter pelo menos 8 caracteres.';
+                return null;
+            }
+
+            function validatePasswordConfirm(value) {
+                if (!value || value.length === 0) return 'A confirmação de senha é obrigatória.';
+                if (passwordNewInput && value !== passwordNewInput.value) return 'As senhas não coincidem.';
+                return null;
+            }
+
+            // Real-time validation
+            passwordNewInput.addEventListener('input', function() {
+                if (this.value.length > 0) {
+                    var error = validatePassword(this.value);
+                    if (error) showValidationError(this, error);
+                    else removeValidationError(this);
+                } else {
+                    removeValidationError(this);
+                }
+                // Revalidate confirm if it has a value
+                if (passwordConfirmInput.value.length > 0) {
+                    var cErr = validatePasswordConfirm(passwordConfirmInput.value);
+                    if (cErr) showValidationError(passwordConfirmInput, cErr);
+                    else removeValidationError(passwordConfirmInput);
+                }
+            });
+
+            passwordConfirmInput.addEventListener('input', function() {
+                if (this.value.length > 0) {
+                    var error = validatePasswordConfirm(this.value);
+                    if (error) showValidationError(this, error);
+                    else removeValidationError(this);
+                } else {
+                    removeValidationError(this);
+                }
+            });
+
+            passwordNewInput.addEventListener('blur', function() {
+                var error = validatePassword(this.value);
+                if (error) showValidationError(this, error);
+                else removeValidationError(this);
+            });
+
+            passwordConfirmInput.addEventListener('blur', function() {
+                var error = validatePasswordConfirm(this.value);
+                if (error) showValidationError(this, error);
+                else removeValidationError(this);
+            });
+
+            // Form submit validation
+            form.addEventListener('submit', function(e) {
+                var errors = [];
+
+                var pwErr = validatePassword(passwordNewInput.value);
+                if (pwErr) { showValidationError(passwordNewInput, pwErr); errors.push(passwordNewInput); }
+                else removeValidationError(passwordNewInput);
+
+                var pcErr = validatePasswordConfirm(passwordConfirmInput.value);
+                if (pcErr) { showValidationError(passwordConfirmInput, pcErr); errors.push(passwordConfirmInput); }
+                else removeValidationError(passwordConfirmInput);
+
+                if (errors.length > 0) {
+                    e.preventDefault();
+                    errors[0].focus();
+                }
+            });
+        })();
+        </script>
     </#if>
 
 </@layout.registrationLayout>

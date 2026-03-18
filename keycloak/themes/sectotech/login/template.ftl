@@ -45,7 +45,7 @@
 
             <!-- Logo -->
             <div class="login-header">
-                <img src="${url.resourcesPath}/img/ocrsolution-logo.png" alt="OCR Solution" class="login-logo" />
+                <img src="${url.resourcesPath}/img/listen-solution-logo.jpeg" alt="Listen Solution" class="login-logo" />
             </div>
 
             <!-- Título da página -->

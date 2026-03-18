@@ -48,6 +48,81 @@
 
             <button type="submit" class="btn-brand">Verificar</button>
         </form>
+
+        <script>
+        (function() {
+            var form = document.getElementById('kc-otp-login-form');
+            var otpInput = document.getElementById('otp');
+
+            function removeValidationError(input) {
+                var existing = input.parentNode.querySelector('.client-validation-error');
+                if (existing) existing.remove();
+                input.setAttribute('aria-invalid', 'false');
+                input.style.borderColor = '';
+            }
+
+            function showValidationError(input, message) {
+                removeValidationError(input);
+                input.setAttribute('aria-invalid', 'true');
+                input.style.borderColor = '#ef4444';
+                var span = document.createElement('span');
+                span.className = 'alert alert-error client-validation-error';
+                span.style.marginTop = '0.25rem';
+                span.style.display = 'block';
+                span.style.padding = '0.5rem 0.75rem';
+                span.style.fontSize = '0.8rem';
+                span.textContent = message;
+                input.parentNode.appendChild(span);
+            }
+
+            // Block non-digit characters on keypress
+            otpInput.addEventListener('keypress', function(e) {
+                var char = String.fromCharCode(e.which || e.keyCode);
+                if (e.ctrlKey || e.metaKey || e.which < 32) return;
+                if (!/[0-9]/.test(char)) {
+                    e.preventDefault();
+                }
+            });
+
+            // Sanitize paste - only digits
+            otpInput.addEventListener('paste', function(e) {
+                var pasted = (e.clipboardData || window.clipboardData).getData('text');
+                var cleaned = pasted.replace(/[^0-9]/g, '');
+                if (cleaned !== pasted) {
+                    e.preventDefault();
+                    var start = this.selectionStart;
+                    var end = this.selectionEnd;
+                    var val = this.value;
+                    this.value = val.substring(0, start) + cleaned + val.substring(end);
+                    this.setSelectionRange(start + cleaned.length, start + cleaned.length);
+                }
+            });
+
+            // Real-time validation
+            otpInput.addEventListener('input', function() {
+                // Remove any non-digit that got through
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 0) {
+                    removeValidationError(this);
+                }
+            });
+
+            // Form submit validation
+            form.addEventListener('submit', function(e) {
+                if (!otpInput.value || otpInput.value.trim().length === 0) {
+                    e.preventDefault();
+                    showValidationError(otpInput, 'O código de verificação é obrigatório.');
+                    otpInput.focus();
+                } else if (!/^\d+$/.test(otpInput.value)) {
+                    e.preventDefault();
+                    showValidationError(otpInput, 'O código deve conter apenas números.');
+                    otpInput.focus();
+                } else {
+                    removeValidationError(otpInput);
+                }
+            });
+        })();
+        </script>
     </#if>
 
 </@layout.registrationLayout>
