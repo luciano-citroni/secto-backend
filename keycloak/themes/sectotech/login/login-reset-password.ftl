@@ -69,30 +69,6 @@
                 return null;
             }
 
-            // Block invalid characters on keypress
-            usernameInput.addEventListener('keypress', function(e) {
-                var char = String.fromCharCode(e.which || e.keyCode);
-                if (e.ctrlKey || e.metaKey || e.which < 32) return;
-                if (!/[a-zA-Z0-9._\-]/.test(char)) {
-                    e.preventDefault();
-                }
-            });
-
-            // Sanitize paste
-            usernameInput.addEventListener('paste', function(e) {
-                var pasted = (e.clipboardData || window.clipboardData).getData('text');
-                var cleaned = pasted.replace(/[^a-zA-Z0-9._\-]/g, '');
-                if (cleaned !== pasted) {
-                    e.preventDefault();
-                    var start = this.selectionStart;
-                    var end = this.selectionEnd;
-                    var val = this.value;
-                    this.value = val.substring(0, start) + cleaned + val.substring(end);
-                    this.setSelectionRange(start + cleaned.length, start + cleaned.length);
-                    this.dispatchEvent(new Event('input'));
-                }
-            });
-
             // Real-time validation
             usernameInput.addEventListener('input', function() {
                 if (this.value.length > 0) {

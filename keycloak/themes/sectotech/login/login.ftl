@@ -146,36 +146,6 @@
                     return null;
                 }
 
-                // Block invalid characters on keypress for username
-                usernameInput.addEventListener('keypress', function(e) {
-                    var char = String.fromCharCode(e.which || e.keyCode);
-                    // Allow control keys
-                    if (e.ctrlKey || e.metaKey || e.which < 32) return;
-                    // Only allow letters, numbers, dot, hyphen, underscore
-                    if (!/[a-zA-Z0-9._\-]/.test(char)) {
-                        e.preventDefault();
-                        return;
-                    }
-                });
-
-                // Block paste of invalid content for username
-                usernameInput.addEventListener('paste', function(e) {
-                    var pasted = (e.clipboardData || window.clipboardData).getData('text');
-                    // Remove all invalid characters from pasted content
-                    var cleaned = pasted.replace(/[^a-zA-Z0-9._\-]/g, '');
-                    if (cleaned !== pasted) {
-                        e.preventDefault();
-                        // Insert cleaned version
-                        var start = this.selectionStart;
-                        var end = this.selectionEnd;
-                        var val = this.value;
-                        this.value = val.substring(0, start) + cleaned + val.substring(end);
-                        this.setSelectionRange(start + cleaned.length, start + cleaned.length);
-                        // Trigger validation
-                        this.dispatchEvent(new Event('input'));
-                    }
-                });
-
                 // Real-time validation on input
                 usernameInput.addEventListener('input', function() {
                     var value = this.value;
