@@ -40,10 +40,10 @@ public class KeycloakAdminService {
     @Value("${keycloak.admin-password}")
     private String adminPassword;
 
-    @Value("${spring.security.oauth2.client.registration.keycloak.client-id}")
+    @Value("${keycloak.client-id}")
     private String keycloakClientId;
 
-    @Value("${spring.security.oauth2.client.registration.keycloak.client-secret}")
+    @Value("${keycloak.client-secret}")
     private String keycloakClientSecret;
 
     private final RestTemplate restTemplate = new RestTemplate();
