@@ -15,5 +15,10 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
      * Busca company pelo client_id para autenticação via client credentials
      */
     Optional<Company> findByClientId(String clientId);
+
+    /**
+     * Busca company pelo ownerId (Keycloak user UUID do admin da empresa)
+     */
+    Optional<Company> findByOwnerId(UUID ownerId);
     
 }
