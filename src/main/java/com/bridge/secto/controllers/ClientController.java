@@ -20,6 +20,7 @@ import com.bridge.secto.dtos.ClientResponseDto;
 import com.bridge.secto.entities.Client;
 import com.bridge.secto.entities.Company;
 import com.bridge.secto.enums.Gender;
+import com.bridge.secto.exceptions.BusinessRuleException;
 import com.bridge.secto.exceptions.ResourceNotFoundException;
 import com.bridge.secto.exceptions.UnauthorizedActionException;
 import com.bridge.secto.repositories.ClientRepository;
@@ -102,20 +103,20 @@ public class ClientController {
         return ResponseEntity.ok(mapToResponseDto(client));
     }
 
-    @Operation(summary = "Criar cliente", description = "Cria um novo cliente associado à empresa autenticada. O CPF deve ser único.")
+    @Operation(summary = "Criar cliente", description = "Cria um novo cliente associado à empresa autenticada. O CPF deve ser único por empresa.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cliente criado com sucesso"),
-        @ApiResponse(responseCode = "400", description = "CPF já existe ou dados inválidos")
+        @ApiResponse(responseCode = "400", description = "CPF já existe nesta empresa ou dados inválidos")
     })
     @PostMapping
     public ResponseEntity<ClientResponseDto> createClient(@Valid @RequestBody ClientRequestDto request) {
         UUID userCompanyId = authService.getCurrentCompanyId();
 
-        // Check if CPF already exists
+        // Check if CPF already exists for this company
         if (request.getCpf() != null && !request.getCpf().isEmpty()) {
-            clientRepository.findByCpf(request.getCpf())
+            clientRepository.findByCompanyIdAndCpf(userCompanyId, request.getCpf())
                 .ifPresent(existingClient -> {
-                    throw new IllegalArgumentException("CPF already exists");
+                    throw new BusinessRuleException("Já existe um cliente com este CPF nesta empresa");
                 });
         }
 
@@ -145,7 +146,7 @@ public class ClientController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cliente atualizado com sucesso"),
         @ApiResponse(responseCode = "404", description = "Cliente não encontrado"),
-        @ApiResponse(responseCode = "400", description = "CPF já existe para outro cliente")
+        @ApiResponse(responseCode = "400", description = "CPF já existe para outro cliente nesta empresa")
     })
     @PutMapping("/{id}")
     public ResponseEntity<ClientResponseDto> updateClient(@PathVariable UUID id, 
@@ -159,12 +160,12 @@ public class ClientController {
             throw new UnauthorizedActionException("Unauthorized to access this client");
         }
 
-        // Check if CPF already exists for another client
+        // Check if CPF already exists for another client in the same company
         if (request.getCpf() != null && !request.getCpf().isEmpty()) {
-            clientRepository.findByCpf(request.getCpf())
+            clientRepository.findByCompanyIdAndCpf(userCompanyId, request.getCpf())
                 .ifPresent(existingClient -> {
                     if (!existingClient.getId().equals(id)) {
-                        throw new IllegalArgumentException("CPF already exists for another client");
+                        throw new BusinessRuleException("Já existe um cliente com este CPF nesta empresa");
                     }
                 });
         }
