@@ -18,6 +18,8 @@ services:
       retries: 5
 
   keycloak:
+    profiles:
+      - local
     build:
       context: ./keycloak
       dockerfile: Dockerfile
