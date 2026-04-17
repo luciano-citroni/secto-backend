@@ -135,6 +135,8 @@ public class ClientController {
         if (request.getGender() != null && !request.getGender().isEmpty()) {
             client.setGender(Gender.valueOf(request.getGender().toUpperCase()));
         }
+        client.setRepresentativeName(request.getRepresentativeName());
+        client.setRepresentativeCpf(request.getRepresentativeCpf());
         client.setCompany(company);
 
         client = clientRepository.save(client);
@@ -183,6 +185,8 @@ public class ClientController {
         if (request.getGender() != null && !request.getGender().isEmpty()) {
             client.setGender(Gender.valueOf(request.getGender().toUpperCase()));
         }
+        client.setRepresentativeName(request.getRepresentativeName());
+        client.setRepresentativeCpf(request.getRepresentativeCpf());
 
         client = clientRepository.save(client);
 
@@ -224,6 +228,8 @@ public class ClientController {
         dto.setEmail(client.getEmail());
         dto.setStatus(client.getStatus());
         dto.setGender(client.getGender() != null ? client.getGender().name() : null);
+        dto.setRepresentativeName(client.getRepresentativeName());
+        dto.setRepresentativeCpf(client.getRepresentativeCpf());
         dto.setCompanyId(client.getCompany().getId());
         return dto;
     }

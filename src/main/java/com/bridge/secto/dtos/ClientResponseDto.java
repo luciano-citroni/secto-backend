@@ -17,5 +17,7 @@ public class ClientResponseDto {
     private String email;
     private Boolean status;
     private String gender;
+    private String representativeName;
+    private String representativeCpf;
     private UUID companyId;
 }

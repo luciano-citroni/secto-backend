@@ -49,6 +49,12 @@ public class Client extends BaseEntity {
     @Column(name = "gender", length = 20)
     private Gender gender;
 
+    @Column(name = "representative_name")
+    private String representativeName;
+
+    @Column(name = "representative_cpf")
+    private String representativeCpf;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;

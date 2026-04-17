@@ -44,4 +44,12 @@ public class ClientRequestDto {
 
     @Schema(description = "Gender", example = "MALE", allowableValues = {"MALE", "FEMALE", "OTHER"})
     private String gender;
+
+    @Size(max = 200, message = "Representative name must have at most 200 characters")
+    @Schema(description = "Nome do representante", example = "Maria da Silva")
+    private String representativeName;
+
+    @Size(max = 11, message = "Representative CPF must have at most 11 characters")
+    @Schema(description = "CPF do representante (somente números)", example = "98765432100")
+    private String representativeCpf;
 }

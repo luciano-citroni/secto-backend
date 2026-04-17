@@ -18,6 +18,6 @@ public class ScriptItemInputDto {
     private String answer;
 
     @Schema(description = "Campo do cliente vinculado a esta pergunta", example = "fullName", 
-            allowableValues = {"fullName", "cpf", "rg", "birthDate", "address", "phone", "email", "sexo"})
+            allowableValues = {"fullName", "cpf", "rg", "birthDate", "address", "phone", "email", "sexo", "representativeName", "representativeCpf"})
     private String linkedClientField;
 }
