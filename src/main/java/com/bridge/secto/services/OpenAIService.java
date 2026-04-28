@@ -30,9 +30,11 @@ import com.openai.models.chat.completions.StructuredChatCompletion;
 import com.openai.models.chat.completions.StructuredChatCompletionCreateParams;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OpenAIService {
 
     private final OpenAIClient openAIClient;
@@ -42,6 +44,7 @@ public class OpenAIService {
     private final ScriptRepository scriptRepository;
     private final AuthService authService;
     private final ObjectMapper objectMapper;
+    private final S3StorageService s3StorageService;
 
     public record AnalysisProcessingResult(OpenAiAnalysisResponseDTO response, UUID analysisResultId) {}
 
@@ -132,6 +135,29 @@ public class OpenAIService {
                 }
                 
                 analysisResultRepository.save(result);
+
+                // Rename S3 object to listen-{id}.{ext} pattern for public status endpoint
+                if (audioFilename != null && !audioFilename.isBlank()) {
+                    try {
+                        String ext = audioFilename.contains(".")
+                            ? audioFilename.substring(audioFilename.lastIndexOf("."))
+                            : "";
+                        String newKey = "listen-" + result.getId() + ext;
+
+                        if (!audioFilename.equals(newKey)) {
+                            s3StorageService.copyObject(audioFilename, newKey);
+                            if (!audioFilename.startsWith("listen-")) {
+                                s3StorageService.deleteObject(audioFilename);
+                            }
+                            result.setAudioFilename(newKey);
+                            result.setAudioUrl(s3StorageService.buildObjectUrl(newKey));
+                            analysisResultRepository.save(result);
+                        }
+                    } catch (Exception renameEx) {
+                        log.warn("Failed to rename S3 object to listen pattern: {}", renameEx.getMessage());
+                    }
+                }
+
                 return new AnalysisProcessingResult(response, result.getId());
             } catch (Exception e) {
                 e.printStackTrace(); 

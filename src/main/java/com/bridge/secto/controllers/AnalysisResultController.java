@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bridge.secto.dtos.AdminQuestionOverrideRequestDto;
 import com.bridge.secto.dtos.AnalysisResultResponseDto;
+import com.bridge.secto.dtos.AnalysisResultSummaryDto;
 import com.bridge.secto.dtos.ScriptItemInputDto;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -70,6 +71,21 @@ public class AnalysisResultController {
                 .map(this::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "List analysis results summary (without transcription, script and AI output)")
+    public ResponseEntity<List<AnalysisResultSummaryDto>> getSummary(
+            @RequestParam(required = false) UUID clientId) {
+        UUID companyId = authService.getCurrentUser()
+            .map(AuthService.UserInfo::getCompanyId)
+            .orElseThrow(() -> new UnauthorizedActionException("User not associated with any company"));
+
+        List<AnalysisResultSummaryDto> summaries = clientId != null
+                ? repository.findSummaryByCompanyIdAndClientId(companyId, clientId)
+                : repository.findSummaryByCompanyId(companyId);
+
+        return ResponseEntity.ok(summaries);
     }
 
     @GetMapping("/{id}")

@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -66,6 +68,44 @@ public class S3StorageService {
         }
     }
 
+    public String buildObjectUrl(String objectKey) {
+        if (s3Endpoint.contains("amazonaws.com")) {
+            return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, objectKey);
+        } else {
+            return String.format("%s/%s/%s", s3Endpoint, bucketName, objectKey);
+        }
+    }
+
+    public void copyObject(String sourceKey, String destinationKey) {
+        try {
+            s3Client.copyObject(
+                CopyObjectRequest.builder()
+                    .sourceBucket(bucketName)
+                    .sourceKey(sourceKey)
+                    .destinationBucket(bucketName)
+                    .destinationKey(destinationKey)
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error copying S3 object from {} to {}", sourceKey, destinationKey, e);
+            throw new RuntimeException("Error copying S3 object", e);
+        }
+    }
+
+    public void deleteObject(String objectKey) {
+        try {
+            s3Client.deleteObject(
+                DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error deleting S3 object: {}", objectKey, e);
+            throw new RuntimeException("Error deleting S3 object", e);
+        }
+    }
+
     public java.nio.file.Path downloadToTempFile(String objectKey) {
         try {
             String extension = ".tmp";
@@ -101,6 +141,7 @@ public class S3StorageService {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(objectKey)
+                    .responseContentDisposition("attachment; filename=\"" + objectKey + "\"")
                     .build();
 
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
