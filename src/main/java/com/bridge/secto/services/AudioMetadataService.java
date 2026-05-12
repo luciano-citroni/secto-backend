@@ -100,7 +100,7 @@ public class AudioMetadataService {
     }
 
     /**
-     * Estratégia 3: calcular duração a partir de nb_samples e sample_rate.
+     * Estratégia 3: calcular duração a partir de duration_ts e sample_rate.
      * Muito confiável para FLAC e outros formatos lossless.
      */
     private Double tryCalculateFromSamples(File file) {
@@ -108,9 +108,8 @@ public class AudioMetadataService {
             ProcessBuilder pb = new ProcessBuilder(
                     "ffprobe", "-v", "error",
                     "-select_streams", "a:0",
-                    "-show_entries", "stream=sample_rate,duration_ts,nb_frames",
-                    "-show_entries", "format_tags=",
-                    "-of", "csv=p=0",
+                    "-show_entries", "stream=sample_rate,duration_ts",
+                    "-of", "default=noprint_wrappers=1",
                     file.getAbsolutePath()
             );
             pb.redirectErrorStream(true);
@@ -128,120 +127,112 @@ public class AudioMetadataService {
             }
 
             int exitCode = process.waitFor();
+            log.debug("Estratégia 3 (samples) - exitCode={}, output=[{}]", exitCode, output);
             if (exitCode != 0 || output.isEmpty()) {
                 return null;
             }
 
-            // CSV output: sample_rate,duration_ts,nb_frames
-            String[] parts = output.split("[,\\n]");
+            // Output formato: sample_rate=44100\nduration_ts=12345678
             Long sampleRate = null;
-            Long totalSamples = null;
+            Long durationTs = null;
 
-            for (String part : parts) {
-                part = part.trim();
-                if (part.isEmpty() || "N/A".equalsIgnoreCase(part)) continue;
-                try {
-                    long val = Long.parseLong(part);
-                    if (sampleRate == null && val >= 8000 && val <= 384000) {
-                        sampleRate = val;
-                    } else if (totalSamples == null && val > 0) {
-                        totalSamples = val;
+            for (String line : output.split("\n")) {
+                line = line.trim();
+                if (line.startsWith("sample_rate=")) {
+                    String val = line.substring("sample_rate=".length()).trim();
+                    if (!"N/A".equalsIgnoreCase(val)) {
+                        sampleRate = Long.parseLong(val);
                     }
-                } catch (NumberFormatException ignored) {
+                } else if (line.startsWith("duration_ts=")) {
+                    String val = line.substring("duration_ts=".length()).trim();
+                    if (!"N/A".equalsIgnoreCase(val)) {
+                        durationTs = Long.parseLong(val);
+                    }
                 }
             }
 
-            if (sampleRate != null && totalSamples != null && sampleRate > 0) {
-                double duration = (double) totalSamples / sampleRate;
-                if (duration > 0) {
-                    return duration;
-                }
+            if (sampleRate != null && durationTs != null && sampleRate > 0 && durationTs > 0) {
+                double duration = (double) durationTs / sampleRate;
+                log.debug("Estratégia 3 calculou: {} / {} = {} segundos", durationTs, sampleRate, duration);
+                return duration;
             }
         } catch (Exception e) {
-            log.debug("Fallback nb_samples/sample_rate falhou: {}", e.getMessage());
+            log.warn("Fallback nb_samples/sample_rate falhou: {}", e.getMessage());
         }
         return null;
     }
 
     /**
-     * Estratégia 4: decodificar o arquivo completo para obter a duração real.
-     * Mais lento, porém funciona para qualquer formato válido.
+     * Estratégia 4: usar ffmpeg para decodificar o arquivo completo e extrair a duração.
+     * Mais lento, porém funciona para qualquer arquivo de áudio válido.
      */
     private Double tryDecodeDuration(File file) {
         try {
             ProcessBuilder pb = new ProcessBuilder(
-                    "ffprobe", "-v", "error",
-                    "-select_streams", "a:0",
-                    "-count_packets",
-                    "-show_entries", "stream=nb_read_packets,sample_rate,codec_time_base",
-                    "-of", "csv=p=0",
-                    file.getAbsolutePath()
+                    "ffmpeg",
+                    "-i", file.getAbsolutePath(),
+                    "-f", "null",
+                    "-"
             );
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            String output;
+            String lastTimeLine = null;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    if (!sb.isEmpty()) sb.append("\n");
-                    sb.append(line.trim());
+                    // ffmpeg imprime linhas como: "size=... time=00:04:30.12 ..."
+                    if (line.contains("time=")) {
+                        lastTimeLine = line;
+                    }
                 }
-                output = sb.toString().trim();
             }
 
             int exitCode = process.waitFor();
-            if (exitCode != 0 || output.isEmpty()) {
-                return null;
-            }
+            log.debug("Estratégia 4 (ffmpeg decode) - exitCode={}, lastTimeLine=[{}]", exitCode, lastTimeLine);
 
-            // Tentar parsear codec_time_base (ex: 1/44100) e nb_read_packets
-            String[] parts = output.split("[,\\n]");
-            Long nbPackets = null;
-            Long sampleRate = null;
-            String codecTimeBase = null;
-
-            for (String part : parts) {
-                part = part.trim();
-                if (part.isEmpty() || "N/A".equalsIgnoreCase(part)) continue;
-                if (part.contains("/")) {
-                    codecTimeBase = part;
-                } else {
-                    try {
-                        long val = Long.parseLong(part);
-                        if (sampleRate == null && val >= 8000 && val <= 384000) {
-                            sampleRate = val;
-                        } else if (val > 0) {
-                            nbPackets = val;
-                        }
-                    } catch (NumberFormatException ignored) {
+            if (lastTimeLine != null) {
+                // Extrair time=HH:MM:SS.ss
+                int idx = lastTimeLine.indexOf("time=");
+                if (idx >= 0) {
+                    String timeStr = lastTimeLine.substring(idx + 5).trim();
+                    // Cortar no próximo espaço
+                    int spaceIdx = timeStr.indexOf(' ');
+                    if (spaceIdx > 0) {
+                        timeStr = timeStr.substring(0, spaceIdx);
+                    }
+                    // Parsear HH:MM:SS.ss ou HH:MM:SS
+                    Double duration = parseTimeToSeconds(timeStr);
+                    if (duration != null && duration > 0) {
+                        log.debug("Estratégia 4 extraiu duração: {} segundos de time={}", duration, timeStr);
+                        return duration;
                     }
                 }
             }
-
-            // Calcular duração via codec_time_base * nb_read_packets
-            if (nbPackets != null && codecTimeBase != null) {
-                String[] tbParts = codecTimeBase.split("/");
-                if (tbParts.length == 2) {
-                    double num = Double.parseDouble(tbParts[0]);
-                    double den = Double.parseDouble(tbParts[1]);
-                    if (den > 0) {
-                        double duration = nbPackets * (num / den);
-                        if (duration > 0) return duration;
-                    }
-                }
-            }
-
-            // Fallback: nb_read_packets / sample_rate (para FLAC cada packet = 1 frame = 1 sample block)
-            if (nbPackets != null && sampleRate != null && sampleRate > 0) {
-                // Para FLAC, nb_read_packets normalmente corresponde ao número de frames,
-                // mas a duração real depende do blocksize. Usar codec_time_base é preferível.
-                log.debug("Fallback decode: packets={}, sampleRate={} - sem codec_time_base confiável", nbPackets, sampleRate);
-            }
-
         } catch (Exception e) {
-            log.debug("Fallback por decodificação falhou: {}", e.getMessage());
+            log.warn("Fallback por decodificação ffmpeg falhou: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Converte timestamp HH:MM:SS.ss para segundos.
+     */
+    private Double parseTimeToSeconds(String timeStr) {
+        try {
+            String[] parts = timeStr.split(":");
+            if (parts.length == 3) {
+                double hours = Double.parseDouble(parts[0]);
+                double minutes = Double.parseDouble(parts[1]);
+                double seconds = Double.parseDouble(parts[2]);
+                return hours * 3600 + minutes * 60 + seconds;
+            } else if (parts.length == 2) {
+                double minutes = Double.parseDouble(parts[0]);
+                double seconds = Double.parseDouble(parts[1]);
+                return minutes * 60 + seconds;
+            }
+        } catch (NumberFormatException e) {
+            log.debug("Erro ao parsear timestamp '{}': {}", timeStr, e.getMessage());
         }
         return null;
     }
