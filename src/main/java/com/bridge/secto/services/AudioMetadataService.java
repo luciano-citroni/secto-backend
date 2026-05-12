@@ -31,28 +31,40 @@ public class AudioMetadataService {
             tempFile = Files.createTempFile("audio_", suffix).toFile();
             Files.copy(audioFile.getInputStream(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-            // Executar FFprobe para obter duração exata
+            // Executar FFprobe para obter duração exata (format + stream como fallback para FLAC etc.)
             ProcessBuilder pb = new ProcessBuilder(
                 "ffprobe",
                 "-v", "error",
                 "-show_entries", "format=duration",
+                "-show_entries", "stream=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1",
                 tempFile.getAbsolutePath()
             );
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            String output;
+            String output = null;
+            String fallbackOutput = null;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                output = reader.readLine();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim();
+                    if (!line.isEmpty() && !"N/A".equalsIgnoreCase(line)) {
+                        if (output == null) {
+                            output = line;
+                        } else {
+                            fallbackOutput = line;
+                        }
+                    }
+                }
             }
 
             int exitCode = process.waitFor();
-            if (exitCode != 0 || output == null || output.isBlank()) {
+            if (exitCode != 0 || output == null) {
                 throw new RuntimeException("FFprobe não conseguiu ler a duração do arquivo: " + originalFilename);
             }
 
-            double durationInSeconds = Double.parseDouble(output.trim());
+            double durationInSeconds = Double.parseDouble(output);
             if (durationInSeconds <= 0) {
                 throw new RuntimeException("Duração inválida extraída do arquivo: " + originalFilename);
             }
